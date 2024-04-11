@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=LCD rotation RIGHT
+Comment=Execute the script
+Exec=<hogehoge>/LCD_panel_rotate_RIGHT.sh
+Path=<fugafuga>
+Icon=<foobar>/icons/face-cool_red.png
+Type=Application
+Terminal=true

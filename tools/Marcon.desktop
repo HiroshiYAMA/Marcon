@@ -1,0 +1,9 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Marcon7
+Comment=Execute the script
+Exec=<hogehoge>/marcon/install/marcon
+Path=<fugafuga>
+Icon=<foobar>/icons/face-laugh_cyan.png
+Type=Application
+Terminal=true
