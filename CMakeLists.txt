@@ -92,6 +92,7 @@ message("OpenCV include dirs: ${OpenCV_INCLUDE_DIRS}")
 message("OpenCV libraries: ${OpenCV_LIBRARIES}")
 target_include_directories(${target} PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(${target} ${OpenCV_LIBRARIES})
+target_compile_definitions(${target} PUBLIC GAPI_ENABLE)
 
 # ImGui.
 set(IMGUI_INCLUDE_DIRS

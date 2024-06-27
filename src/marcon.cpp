@@ -23,6 +23,7 @@
 
 #include "common_utils.h"
 #include "gui_utils.h"
+#include "opencv_utils.h"
 
 // Main code
 int main(int, char**)
