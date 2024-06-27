@@ -39,5 +39,8 @@ message("OpenCV libraries: ${OpenCV_LIBRARIES}")
 target_include_directories(${target} PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(${target} ${OpenCV_LIBRARIES})
 
+# using NVIDIA plugins of GStreamer.
+# target_compile_definitions(${target} PUBLIC GST_NV)
+
 ## Install path defined in parent CMakeLists
 install(TARGETS ${target} DESTINATION ${exe_install_path})

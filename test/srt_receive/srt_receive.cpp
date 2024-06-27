@@ -22,11 +22,16 @@
  */
 
 #include <iostream>
+#include <thread>
 
 #include <opencv2/opencv.hpp>
 
 int main(int ac, char *av[])
 {
+    auto th_num = std::thread::hardware_concurrency();
+    auto w = 800;
+    auto h = 450;
+
     std::ostringstream ss;
 
 //    ss << "srtserversrc uri=srt://:4201 ! ";
@@ -34,8 +39,15 @@ int main(int ac, char *av[])
     ss << "tsdemux ! ";
     ss << "queue ! ";
     ss << "h264parse ! video/x-h264 ! ";
+#ifdef GST_NV
     ss << "nvv4l2decoder ! ";
-    ss << "nvvideoconvert ! videoconvert ! video/x-raw,format=BGR ! ";
+    ss << "nvvideoconvert ! video/x-raw,width=" << w << ",height=" << h << " ! ";
+#else
+    ss << "avdec_h264 ! ";
+    ss << "videoscale n-threads=" << th_num << " ! video/x-raw,width=" << w << ",height=" << h << " ! ";
+#endif
+    ss << "videoconvert n-threads=" << th_num << " ! video/x-raw,format=BGR ! ";
+
     ss << "appsink sync=false";
     std::string gst_str = ss.str();
 
