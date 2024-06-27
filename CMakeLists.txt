@@ -7,7 +7,9 @@ set(CMAKE_INSTALL_PREFIX "../install")
 set(exe_install_path ".")
 
 set(SRC_DIR "src")
-set(IMGUI_DIR "external/imgui")
+set(EXTERNAL_DIR "external")
+set(GLFW_DIR "${EXTERNAL_DIR}/glfw")
+set(IMGUI_DIR "${EXTERNAL_DIR}/imgui")
 
 add_executable(${target}
     ${SRC_DIR}/marcon.cpp
@@ -17,7 +19,7 @@ add_executable(${target}
     ${IMGUI_DIR}/imgui_draw.cpp
     ${IMGUI_DIR}/imgui_tables.cpp
     ${IMGUI_DIR}/imgui_widgets.cpp
-    ${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
     ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
 )
 
@@ -56,24 +58,30 @@ if(UNIX AND NOT APPLE)
     endif()
 endif(UNIX AND NOT APPLE)
 
-# SDL2.
-if(NOT WIN32)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(SDL2 REQUIRED sdl2)
-else(NOT WIN32)
-    set(SDL2_INCLUDE_DIRS "c:/SDL2/include")
-    set(SDL2_LIBRARY_DIRS "c:/SDL2/lib/x64")
-    set(SDL2_LIBRARIES "${SDL2_LIBRARY_DIRS}/SDL2.lib" "${SDL2_LIBRARY_DIRS}/SDL2main.lib")
-endif(NOT WIN32)
-message("SDL2 : ${SDL2_VERSION}")
-message("SDL2 include dirs: ${SDL2_INCLUDE_DIRS}")
-message("SDL2 library dirs: ${SDL2_LIBRARY_DIRS}")
-message("SDL2 libraries: ${SDL2_LIBRARIES}")
-message("SDL2 cflags: ${SDL2_CFLAGS}")
-target_compile_definitions(${target} PUBLIC _REENTRANT _THREAD_SAFE)
-target_include_directories(${target} PUBLIC ${SDL2_INCLUDE_DIRS})
-target_link_libraries(${target} ${SDL2_LIBRARIES})
-target_link_directories(${target} PUBLIC ${SDL2_LIBRARY_DIRS})
+# # SDL2.
+# if(NOT WIN32)
+#     find_package(PkgConfig REQUIRED)
+#     pkg_check_modules(SDL2 REQUIRED sdl2)
+# else(NOT WIN32)
+#     set(SDL2_INCLUDE_DIRS "c:/SDL2/include")
+#     set(SDL2_LIBRARY_DIRS "c:/SDL2/lib/x64")
+#     set(SDL2_LIBRARIES "${SDL2_LIBRARY_DIRS}/SDL2.lib" "${SDL2_LIBRARY_DIRS}/SDL2main.lib")
+# endif(NOT WIN32)
+# message("SDL2 : ${SDL2_VERSION}")
+# message("SDL2 include dirs: ${SDL2_INCLUDE_DIRS}")
+# message("SDL2 library dirs: ${SDL2_LIBRARY_DIRS}")
+# message("SDL2 libraries: ${SDL2_LIBRARIES}")
+# message("SDL2 cflags: ${SDL2_CFLAGS}")
+# target_compile_definitions(${target} PUBLIC _REENTRANT _THREAD_SAFE)
+# target_include_directories(${target} PUBLIC ${SDL2_INCLUDE_DIRS})
+# target_link_libraries(${target} ${SDL2_LIBRARIES})
+# target_link_directories(${target} PUBLIC ${SDL2_LIBRARY_DIRS})
+
+# GLFW.
+add_subdirectory(${GLFW_DIR})
+target_include_directories(${target} PUBLIC ${GLFW_DIR}/include)
+target_link_directories(${target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/build/${GLFW_DIR}/src)
+target_link_libraries(${target} libglfw3.a pthread)
 
 # OpenCV.
 find_package(PkgConfig REQUIRED)
@@ -86,8 +94,8 @@ target_link_libraries(${target} ${OpenCV_LIBRARIES})
 
 # ImGui.
 set(IMGUI_INCLUDE_DIRS
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui"
-    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends"
+    "${CMAKE_CURRENT_SOURCE_DIR}/${IMGUI_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/${IMGUI_DIR}/backends"
 )
 target_include_directories(${target} PUBLIC ${IMGUI_INCLUDE_DIRS})
 target_link_libraries(${target} GL dl)
