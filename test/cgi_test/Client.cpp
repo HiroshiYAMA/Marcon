@@ -3,6 +3,9 @@
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 #include <httplib.h>
 
+#include <json.hpp>
+using njson = nlohmann::json;
+
 int main(int ac, char *av[])
 {
 	std::string server_adr = av[1];
@@ -39,8 +42,25 @@ int main(int ac, char *av[])
 			std::cout << "ERROR (" << st << ") : " << msg << std::endl;
 			break;
 		case SC::OK_200:
-			std::cout << "(" << st << ")" << msg << std::endl;
-			std::cout << "body : " << res->body << std::endl;
+			{
+				std::cout << "(" << st << ")" << msg << std::endl;
+				std::cout << "body : " << res->body << std::endl;
+
+				try
+				{
+					auto j = njson::parse(res->body);
+					std::cout << "JSON " << j << std::endl;
+					auto s = j["system"];
+					auto ss = s["LanguageInfo"];
+					std::cout << "JSON: " << ss << std::endl;
+					auto jj = j["/system/LanguageInfo"_json_pointer];
+					std::cout << "JSON : " << jj << std::endl;
+				}
+				catch(const std::exception& e)
+				{
+					std::cerr << e.what() << '\n';
+				}
+			}
 			break;
 		default:
 			;

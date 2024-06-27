@@ -22,12 +22,18 @@ message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
 # cpp-httplib.
 set(CPP_HTTPLIB_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../external/cpp-httplib")
 
+# JSON.
+set(JSON_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../external/json/single_include/nlohmann")
+add_definitions("-DJSON_USE_IMPLICIT_CONVERSIONS=0")
+
+set(LOCAL_INCLUDE_PATH ${CPP_HTTPLIB_PATH} ${JSON_PATH})
+
 # compile executable file
 add_executable(server Server.cpp)
 add_executable(client Client.cpp)
 
-target_include_directories(server PUBLIC ${OPENSSL_INCLUDE_DIR} ${CPP_HTTPLIB_PATH})
-target_include_directories(client PUBLIC ${OPENSSL_INCLUDE_DIR} ${CPP_HTTPLIB_PATH})
+target_include_directories(server PUBLIC ${OPENSSL_INCLUDE_DIR} ${LOCAL_INCLUDE_PATH})
+target_include_directories(client PUBLIC ${OPENSSL_INCLUDE_DIR} ${LOCAL_INCLUDE_PATH})
 target_link_libraries(server ${OPENSSL_LIBRARIES} pthread)
 target_link_libraries(client ${OPENSSL_LIBRARIES} pthread)
 # target_compile_definitions(server HOGEHOGE)
