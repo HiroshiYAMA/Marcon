@@ -13,6 +13,7 @@ set(IMGUI_DIR "${EXTERNAL_DIR}/imgui")
 
 add_executable(${target}
     ${SRC_DIR}/marcon.cpp
+    ${SRC_DIR}/gui_utils.cpp
 
     ${IMGUI_DIR}/imgui.cpp
     ${IMGUI_DIR}/imgui_demo.cpp
