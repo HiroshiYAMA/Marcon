@@ -102,6 +102,29 @@ set(IMGUI_INCLUDE_DIRS
 target_include_directories(${target} PUBLIC ${IMGUI_INCLUDE_DIRS})
 target_link_libraries(${target} GL dl)
 
+# JSON.
+set(JSON_INCLUDE_DIR "${EXTERNAL_DIR}/json/single_include/nlohmann")
+target_compile_definitions(${target} PUBLIC "JSON_USE_IMPLICIT_CONVERSIONS=0")
+target_include_directories(${target} PUBLIC ${JSON_INCLUDE_DIR})
+
+# require OpenSSL v3. If you need, set path of OpenSSL v3.
+# set(ENV{OPENSSL_ROOT_DIR} /opt/openssl3)
+
+# OpenSSL v3.
+find_package(OpenSSL REQUIRED)
+message("OpenSSL : ${OPENSSL_VERSION}")
+message("OpenSSL include dirs: ${OPENSSL_INCLUDE_DIR}")
+message("OpenSSL library dirs: ${OPENSSL_LIBRARY_DIR}")
+message("OpenSSL libraries: ${OPENSSL_CRYPTO_LIBRARIES}")
+message("OpenSSL libraries: ${OPENSSL_SSL_LIBRARIES}")
+message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
+target_include_directories(${target} PUBLIC ${OPENSSL_INCLUDE_DIR})
+target_link_libraries(${target} ${OPENSSL_LIBRARIES})
+
+# cpp-httplib.
+set(CPP_HTTPLIB_INCLUDE_DIR "${EXTERNAL_DIR}/cpp-httplib")
+target_include_directories(${target} PUBLIC ${CPP_HTTPLIB_INCLUDE_DIR})
+
 # using NVIDIA plugins of GStreamer.
 # target_compile_definitions(${target} PUBLIC GST_NV)
 
