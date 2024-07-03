@@ -150,5 +150,10 @@ extern void show_panel_texture(const GLuint tex_id, GLsizei width, GLsizei heigh
     bool v_flip_flag = false,
     const std::vector<std::string> info_str = {});
 
+extern void show_panel_inputtext(const char *id_str, std::string &str, int width = 200, bool is_password = false, const std::string &str_hint = "");
+extern void show_panel_input_decimal(const char *id_str, std::string &str, int width = 200, const std::string &str_hint = "");
+extern void show_panel_input_ip_address(const char *id_str, std::string &str, int width = 200, const std::string &str_hint = "IP address");
+extern void show_panel_input_port_number(const char *id_str, std::string &str, int width = 200, const std::string &str_hint = "Port #");
+
 // V 周期待ち.
 extern void waitVperiod(double &t_pre);

@@ -45,6 +45,12 @@
 // #include <mutex>
 // #include <atomic>
 
+#define CPPHTTPLIB_OPENSSL_SUPPORT
+#include <httplib.h>
+
+#include <json.hpp>
+using njson = nlohmann::json;
+
 #if defined(USE_EXPERIMENTAL_FS)
     #include <experimental/filesystem>
     namespace fs = std::experimental::filesystem;

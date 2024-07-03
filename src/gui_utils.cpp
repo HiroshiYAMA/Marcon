@@ -462,6 +462,44 @@ void show_panel_texture(const GLuint tex_id, GLsizei width, GLsizei height, std:
     ImGui::EndChild();
 }
 
+void show_panel_inputtext(const char *id_str, std::string &str, int width, bool is_password, const std::string &str_hint)
+{
+    ImGui::PushID(id_str);
+
+    ImGui::PushItemWidth(width * vis_xscale);
+    std::string tmp_str = str;
+    tmp_str.reserve(256);
+    ImGui::InputTextWithHint("##input text", str_hint.c_str(), tmp_str.data(), tmp_str.capacity(), is_password ? ImGuiInputTextFlags_Password : ImGuiInputTextFlags_None);
+    ImGui::PopItemWidth();
+    str = std::string{ tmp_str.c_str() };
+
+    ImGui::PopID();
+}
+
+void show_panel_input_decimal(const char *id_str, std::string &str, int width, const std::string &str_hint)
+{
+    ImGui::PushID(id_str);
+
+    ImGui::PushItemWidth(width * vis_xscale);
+    std::string tmp_str = str;
+    tmp_str.reserve(256);
+    ImGui::InputTextWithHint("##input decimal", str_hint.c_str(), tmp_str.data(), tmp_str.capacity(), ImGuiInputTextFlags_CharsDecimal);
+    ImGui::PopItemWidth();
+    str = std::string{ tmp_str.c_str() };
+
+    ImGui::PopID();
+}
+
+void show_panel_input_ip_address(const char *id_str, std::string &str, int width, const std::string &str_hint)
+{
+    show_panel_input_decimal(id_str, str, width, str_hint);
+}
+
+void show_panel_input_port_number(const char *id_str, std::string &str, int width, const std::string &str_hint)
+{
+    show_panel_input_decimal(id_str, str, width, str_hint);
+}
+
 // V 周期待ち.
 void waitVperiod(double &t_pre)
 {
