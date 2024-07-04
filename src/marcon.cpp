@@ -34,7 +34,7 @@ int main(int ac, char *av[])
     auto glsl_version = init_glfw();
 
     // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(win_w, win_h, "Marcon (w/ Dear ImGui)", nullptr, nullptr);
     if (window == nullptr)
         return EXIT_FAILURE;
     glfwMakeContextCurrent(window);
