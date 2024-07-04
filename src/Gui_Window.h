@@ -357,7 +357,7 @@ public:
 
                 // switch full screen / window. key: Enter.
                 static auto k_enter_pre = false;
-                auto k_enter = io.KeysDown[ImGuiKey_Enter];
+                auto k_enter = io.KeysDown[ImGuiKey_F11];
                 if (!k_enter_pre && k_enter) {
                     full_screen = !full_screen;
                     if (full_screen) {
