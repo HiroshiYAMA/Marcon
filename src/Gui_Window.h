@@ -25,9 +25,10 @@
 #include <iostream>
 #include <fstream>
 
-// #include "Gui_Window_Camera.h"
+#include "Gui_Window_Camera.h"
 #include "common_utils.h"
 #include "gui_utils.h"
+#include "RemoteServer.h"
 
 // namespace {
 
@@ -48,33 +49,10 @@
 
 class Gui_Window
 {
-    struct st_RemoteServer
+    struct st_RemoteServerInfo
     {
-        // std::unique_ptr<Gui_Window_Camera> handle;
-        std::string ip_address = {};
-        std::string port = {};
-        std::string username = {};
-        std::string password = {};
-
-        bool is_srt_listener = false;
-        std::string srt_port = {};
-
-        bool is_opend = false;
-
-    public:
-        NLOHMANN_DEFINE_TYPE_INTRUSIVE(
-            st_RemoteServer,
-
-            ip_address,
-            port,
-            username,
-            password,
-
-            is_srt_listener,
-            srt_port,
-
-            is_opend
-        )
+        std::unique_ptr<Gui_Window_Camera> handle = nullptr;
+        st_RemoteServer remote_server = {};
     };
 
 private:
@@ -86,8 +64,8 @@ private:
 
     // cudaStream_t m_cuda_stream = NULL;
 
-    std::map<std::string, st_RemoteServer, std::less<>> remote_server_DB;
-    st_RemoteServer remote_server;
+    std::map<std::string, st_RemoteServerInfo, std::less<>> remote_server_info_DB;
+    st_RemoteServerInfo remote_server_info;
 
     bool is_loop;
 
@@ -115,35 +93,45 @@ private:
     {
         ImGui::PushID("Manage_Remote_Server_DB");
 
-        show_panel_input_ip_address("IP address", remote_server.ip_address, 120, "IPv4 adress"); ImGui::SameLine();
-        show_panel_input_port_number("Port number", remote_server.port, 50); ImGui::SameLine();
-        ImGui::Checkbox("[SRT] Listener", &remote_server.is_srt_listener); ImGui::SameLine();
-        show_panel_input_ip_address("[SRT] Port number", remote_server.srt_port, 120, "SRT IPv4 address"); ImGui::SameLine();
+        auto &rs_info = remote_server_info;
+        auto &rs = rs_info.remote_server;
+        show_panel_input_ip_address("IP address", rs.ip_address, 120, "IPv4 adress"); ImGui::SameLine();
+        show_panel_input_port_number("Port number", rs.port, 50); ImGui::SameLine();
+        ImGui::Checkbox("[SRT] Listener", &rs.is_srt_listener); ImGui::SameLine();
+        show_panel_input_port_number("[SRT] Port number", rs.srt_port, 50); ImGui::SameLine();
         if (ImGui::Button("Add")) {
-            auto &rs = remote_server;
             if (rs.ip_address != "" && rs.port != "" && rs.srt_port != "") {
-                remote_server_DB.emplace(remote_server.ip_address, remote_server);
-                remote_server = {};
+                auto &key = rs.ip_address;
+                auto is_exist = remote_server_info_DB.contains(key);
+                if (!is_exist) {
+                    rs_info.handle.reset();
+                    remote_server_info_DB.emplace(key, std::move(rs_info));
+                }
+                rs_info.handle.reset();
+                rs = {};
             }
         }
 
         ImGui::Separator();
 
         set_style_color(2.0f / 7.0f);
-        for (auto &[k, v] : remote_server_DB) {
+        for (auto &[k, v] : remote_server_info_DB) {
             ImGui::PushID(k.c_str());
 
-            std::string str = v.ip_address + ":" + v.port
-                + " / [SRT]" + (v.is_srt_listener ? "Listener" : "Caller") + ":" + v.srt_port;
+            auto &rs = v.remote_server;
+            std::string str = rs.ip_address + ":" + rs.port
+                + " / [SRT]" + (rs.is_srt_listener ? "Listener" : "Caller") + ":" + rs.srt_port;
             if (ImGui::Button(str.c_str())) {
-                if (!v.is_opend) {
+                auto &gui_win_camera = v.handle;
+                if (!gui_win_camera) {
                     ;   // make unique ptr of Gui_Window_Camera.
+                    gui_win_camera = std::make_unique<Gui_Window_Camera>(win_w, win_h, v.remote_server);
                 }
             }
             ImGui::SameLine();
             if (ImGui::Button("Delete")) {
                 ;   // reset unique ptr og Gui_Window_Camera.
-                remote_server_DB.erase(k);
+                remote_server_info_DB.erase(k);
 
                 ImGui::PopID();
                 break;
@@ -299,8 +287,8 @@ public:
         //     m_cuda_stream = NULL;
         // // }
 
-        remote_server_DB = {};
-        remote_server = {};
+        remote_server_info_DB = std::move(decltype(remote_server_info_DB){});
+        remote_server_info = {};
 
         is_loop = true;
 
@@ -394,18 +382,18 @@ public:
             // display launcher window.
             display_launcher_window();
 
-            // // display control window.
-            // for (auto &e : camera_list) {
-            //     auto &gui_win_camera = e.handle;
-            //     const auto &id = get_id_str_from_cl_name(e.name);
-            //     if (gui_win_camera) {
-            //         auto ret = gui_win_camera->display_control_window(id, drag_drop_filename);
-            //         if (!ret) {
-            //             gui_win_camera->DISCONNECT();
-            //             gui_win_camera.reset();
-            //         }
-            //     }
-            // }
+            // display control window.
+            for (auto &[k, v] : remote_server_info_DB) {
+                auto &gui_win_camera = v.handle;
+                const auto &id = k;
+                if (gui_win_camera) {
+                    auto ret = gui_win_camera->display_control_window(id);
+                    if (!ret) {
+                        gui_win_camera->DISCONNECT();
+                        gui_win_camera.reset();
+                    }
+                }
+            }
 
             // Rendering
             ImGui::Render();
@@ -429,15 +417,13 @@ public:
 
     void DISCONNECT()
     {
-        // for (auto &e : camera_list) {
-        //     auto &gui_win_camera = e.handle;
-        //     if (gui_win_camera) {
-        //         gui_win_camera->DISCONNECT();
-        //         gui_win_camera.reset();
-        //     }
-        // }
-
-        // Cr_Ext_release_camera_list(&camera_info_list);
+        for (auto &[k, v] : remote_server_info_DB) {
+            auto &gui_win_camera = v.handle;
+            if (gui_win_camera) {
+                gui_win_camera->DISCONNECT();
+                gui_win_camera.reset();
+            }
+        }
     }
 
     // // convert camera database -> json.
