@@ -28,7 +28,7 @@
 #include "common_utils.h"
 #include "gui_utils.h"
 #include "RemoteServer.h"
-// #include "ProcLiveView.h"
+#include "ProcLiveView.h"
 
 #if __has_include(<charconv>)
 #include <charconv>
@@ -56,9 +56,9 @@ private:
 
     std::atomic<em_Camera_Connection_State> camera_connection_stat = em_Camera_Connection_State::DISCONNECTED;
 
-    // // thread.
-    // std::unique_ptr<ProcLiveView> proc_live_view;
-    // std::thread thd_proc_live_view;
+    // thread.
+    std::unique_ptr<ProcLiveView> proc_live_view;
+    std::thread thd_proc_live_view;
 
     // template<typename F_get, typename F_set, typename F_get_list, typename F_format, typename F_format_release, typename T>
     // void put_item_change_property(
@@ -167,8 +167,7 @@ private:
     {
         ImGui::PushID("Print_Fps");
 
-        // auto [lap_cur, lap_ave] = proc_live_view->get_lap();
-        float lap_ave = 16.667f;
+        auto [lap_cur, lap_ave] = proc_live_view->get_lap();
         ImGui::Text("%.2f(ms) / %.2f(fps)", lap_ave, 1'000.0 / lap_ave);
 
         ImGui::PopID();
@@ -261,28 +260,31 @@ private:
     {
         // if live view is OK?
         {
-            // proc_live_view->fetch();
-            // proc_live_view->set_params(camera_handle, force_decode, live_view_enable && flg);
+            proc_live_view->fetch();
 
-            // // plain image. pixel format is RGB.
-            // auto image_buf = proc_live_view->get_bitmap_buf();
-            // auto image_width = proc_live_view->get_bitmap_width();
-            // auto image_height = proc_live_view->get_bitmap_height();
+            // plain image. pixel format is RGB.
+            auto image_buf = proc_live_view->get_bitmap_buf();
+            auto image_width = proc_live_view->get_bitmap_width();
+            auto image_height = proc_live_view->get_bitmap_height();
 
-            // // update texture.
-            // if (image_buf != nullptr && image_width > 0 && image_height > 0) {
-            //     if (image_width != tex_width || image_height != tex_height) {
-            //         tex_width = image_width;
-            //         tex_height = image_height;
-            //         tex_id = make_texture(tex_id, GL_TEXTURE_2D, tex_width, tex_height, 0, tex_type, RGB_CH_NUM);
-            //     }
-            //     glBindTexture(GL_TEXTURE_2D, tex_id);
-            //     glPixelStorei(GL_PACK_ALIGNMENT, 1);
-            //     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-            //     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, tex_format, tex_type, image_buf);
-            // }
+            // update texture.
+            if (image_buf != nullptr && image_width > 0 && image_height > 0) {
+                if (image_width != tex_width || image_height != tex_height) {
+                    tex_width = image_width;
+                    tex_height = image_height;
+                    tex_id = make_texture(tex_id, GL_TEXTURE_2D, tex_width, tex_height, 0, tex_type, RGB_CH_NUM);
+                }
+                glBindTexture(GL_TEXTURE_2D, tex_id);
+                glPixelStorei(GL_PACK_ALIGNMENT, 1);
+                glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+                {
+                    if (tex_format == GL_RGB) tex_format = GL_BGR;
+                    else if (tex_format == GL_RGBA) tex_format = GL_BGRA;
+                }
+                glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, tex_width, tex_height, tex_format, tex_type, image_buf);
+            }
 
-            // proc_live_view->next();
+            proc_live_view->next();
         }
 
         auto aspect = GLfloat(tex_width) / GLfloat(tex_height);
@@ -357,17 +359,18 @@ private:
     }
 
 public:
-    Gui_Window_Camera(int w, int h, st_RemoteServer &rs)
+    Gui_Window_Camera(int _width, int _height, const st_RemoteServer &_remote_server)
     {
-        remote_server = rs;
+        remote_server = _remote_server;
 
-        tex_width = w * vis_xscale;
-        tex_height = h * vis_xscale;
+        tex_width = _width * vis_xscale;
+        tex_height = _height * vis_xscale;
         tex_type = get_tex_type(8, false);
         std::tie(tex_internalFormat, tex_format) = get_format(tex_type, RGB_CH_NUM);
         tex_id = make_texture(0, GL_TEXTURE_2D, tex_width, tex_height, 0, tex_type, RGB_CH_NUM);
 
-        camera_connection_stat = em_Camera_Connection_State::CONNECTED;
+        auto is_connected = CONNECT();
+        camera_connection_stat = is_connected ? em_Camera_Connection_State::CONNECTED : em_Camera_Connection_State::DISCONNECTED;
     }
 
     virtual ~Gui_Window_Camera() {
@@ -537,61 +540,32 @@ public:
 
     double get_fps() const { return calc_fps(); }
 
-    // bool CONNECT(int idx, const std::string &str, const std::string &nickname_str, std::string &username_str, std::string &password_str)
     bool CONNECT()
     {
         if (is_CONNECTED()) return false;
 
         bool ret = false;
 
-        // if (!thd_proc_live_view.joinable()) {
-        //     proc_live_view.reset(new ProcLiveView(streaming_ndi_width, streaming_ndi_height, m_cuda_stream));
-        //     std::thread thd_tmp{ [&]{ proc_live_view->run(); }};
-        //     thd_proc_live_view = std::move(thd_tmp);
-        // }
-
-        auto proc_return_false = [&]() -> bool {
-            // if (proc_live_view->is_running()) proc_live_view->stop();
-            // if (thd_proc_live_view.joinable()) thd_proc_live_view.join();
-            return false;
-        };
-
-        // if (Cr_Ext_connect(&camera_handle, idx, username_str.c_str(), password_str.c_str(), this)) {
-
-        //     // Wait callback 'OnConnected' / 'OnError'.
-        //     const auto wait_time = std::chrono::microseconds(10'000'000);
-        //     const auto wait_time_abs = std::chrono::steady_clock::now() + wait_time;
-        //     std::unique_lock<std::mutex> lk(mtx_connected);
-        //     if (cv_connected.wait_until(lk, wait_time_abs) == std::cv_status::timeout) {
-        //         ret = is_CONNECTED();  // Check if connecting success is true at the same time as time out.
-        //         if (!ret) {
-        //             std::cout << "CONNECT : time out" << std::endl;
-        //             return proc_return_false();
-        //         }
-        //     } else {
-        //         ret = is_CONNECTED();
-        //         if (!ret) {
-        //             return proc_return_false();
-        //         }
-        //     }
-
-        // } else {
-        //     return proc_return_false();
-        // }
+        if (!thd_proc_live_view.joinable()) {
+            proc_live_view.reset(new ProcLiveView(remote_server, tex_width, tex_height));
+            if (proc_live_view->is_running()) {
+                std::thread thd_tmp{ [&]{ proc_live_view->run(); }};
+                thd_proc_live_view = std::move(thd_tmp);
+                ret = true;
+            }
+        }
 
         return ret;
     }
 
     bool DISCONNECT()
     {
-        bool ret = false;
+        if (proc_live_view) {
+            if (proc_live_view->is_running()) proc_live_view->stop();
+            if (thd_proc_live_view.joinable()) thd_proc_live_view.join();
+        }
 
-        // if (proc_live_view) {
-        //     if (proc_live_view->is_running()) proc_live_view->stop();
-        //     if (thd_proc_live_view.joinable()) thd_proc_live_view.join();
-        // }
-
-        return ret;
+        return true;
     }
 
 };
