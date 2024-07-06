@@ -59,6 +59,7 @@ private:
     // thread.
     std::unique_ptr<ProcLiveView> proc_live_view;
     std::thread thd_proc_live_view;
+    bool is_display_image;
 
     // template<typename F_get, typename F_set, typename F_get_list, typename F_format, typename F_format_release, typename T>
     // void put_item_change_property(
@@ -288,7 +289,7 @@ private:
         }
 
         auto aspect = GLfloat(tex_width) / GLfloat(tex_height);
-        GLsizei w = 800;    // full screen.
+        GLsizei w = tex_width;
         std::ostringstream sout_title;
         auto &rs = remote_server;
         std::string rs_str = rs.ip_address + ":" + rs.port + " / " + "[SRT]" + (rs.is_srt_listener ? "Listener" : "Caller") + ":" + rs.srt_port;
@@ -300,9 +301,11 @@ private:
             sout_info << rs_str;
             str_info.push_back(sout_info.str());
         }
-        show_panel_texture(tex_id, w, GLsizei(w / aspect), str_title.c_str(), 0, true, str_info);
+        // show_panel_texture(tex_id, w, GLsizei(w / aspect), str_title.c_str(), 0, true, str_info);
+        bool is_opend = true;
+        display_texture(tex_id, w, GLsizei(w / aspect), str_title.c_str(), &is_opend, 0, false, false, true, str_info);
 
-        return true;
+        return is_opend;
     }
 
     double calc_fps() const
@@ -368,6 +371,8 @@ public:
         tex_type = get_tex_type(8, false);
         std::tie(tex_internalFormat, tex_format) = get_format(tex_type, RGB_CH_NUM);
         tex_id = make_texture(0, GL_TEXTURE_2D, tex_width, tex_height, 0, tex_type, RGB_CH_NUM);
+
+        is_display_image = false;
 
         auto is_connected = CONNECT();
         camera_connection_stat = is_connected ? em_Camera_Connection_State::CONNECTED : em_Camera_Connection_State::DISCONNECTED;
@@ -437,11 +442,21 @@ public:
             show_panel_iso_sensitivity_control();
             show_panel_f_number_control();
 
-            show_panel_live_view();
+            if (ImGui::Button("Live View")) {
+                is_display_image = true;                
+            }
         }
         ImGui::End();
 
         return is_window_opened;
+    }
+
+    bool display_live_view(const std::string &win_id)
+    {
+        bool ret = false;
+        if (is_display_image) ret = show_panel_live_view();
+
+        return ret;
     }
 
     bool display_http_digest_login_window(const std::string &win_id)
@@ -524,6 +539,7 @@ public:
 
         case em_Camera_Connection_State::CONNECTED:
             is_window_opened = display_camera_window(win_id);
+            is_display_image = display_live_view(win_id);
             break;
 
         default:
