@@ -189,7 +189,7 @@ public:
                 // write live view info.
                 lv_info_list->Write(lvi);
             }
+            std::tie(lap_cur, lap_ave) = sw.lap();
         }
-        std::tie(lap_cur, lap_ave) = sw.lap();
     }
 };
