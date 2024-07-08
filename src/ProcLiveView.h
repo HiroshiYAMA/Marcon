@@ -69,6 +69,31 @@ private:
     int idx_in;
     int idx_out;
 
+// construct GStreamer pipeline.
+std::string make_gst_pipeline(const st_RemoteServer &remote_server)
+{
+    std::ostringstream ss;
+    ss << "srtclientsrc uri=srt://";
+    ss << (remote_server.is_srt_listener ? "" : remote_server.ip_address);
+    ss << ":" << remote_server.srt_port << " ! ";
+    ss << "tsdemux ! ";
+    ss << "queue ! ";
+    ss << "h264parse ! video/x-h264 ! ";
+#ifdef GST_NV
+    ss << "nvv4l2decoder ! ";
+    ss << "nvvideoconvert ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";
+#else
+    ss << "avdec_h264 ! ";
+    ss << "videoscale n-threads=" << thread_count << " ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";
+#endif
+    ss << "videoconvert n-threads=" << thread_count << " ! video/x-raw,format=BGR ! ";
+
+    ss << "appsink sync=false";
+    std::string str = ss.str();
+
+    return str;
+}
+
 public:
     ProcLiveView(const st_RemoteServer &remote_server, int width, int height, unsigned int th_cnt = 0)
     {
@@ -77,26 +102,7 @@ public:
         image_height = height;
 
         // construct GStreamer pipeline.
-        {
-            std::ostringstream ss;
-            ss << "srtclientsrc uri=srt://";
-            ss << (remote_server.is_srt_listener ? "" : remote_server.ip_address);
-            ss << ":" << remote_server.srt_port << " ! ";
-            ss << "tsdemux ! ";
-            ss << "queue ! ";
-            ss << "h264parse ! video/x-h264 ! ";
-#ifdef GST_NV
-            ss << "nvv4l2decoder ! ";
-            ss << "nvvideoconvert ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";
-#else
-            ss << "avdec_h264 ! ";
-            ss << "videoscale n-threads=" << thread_count << " ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";
-#endif
-            ss << "videoconvert n-threads=" << thread_count << " ! video/x-raw,format=BGR ! ";
-
-            ss << "appsink sync=false";
-            gst_str = ss.str();
-        }
+        gst_str = make_gst_pipeline(remote_server);
 
         video_in = std::make_unique<cv::VideoCapture>(gst_str.c_str(), cv::CAP_GSTREAMER);
         if (!video_in->isOpened()) {
