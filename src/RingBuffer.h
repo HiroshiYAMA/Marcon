@@ -47,6 +47,9 @@ private:
 
     std::mutex mtx;
 
+    uint64_t read_count;
+    uint64_t write_count;
+
 public:
     RingBufferWithPool() = delete;
     RingBufferWithPool(int count)
@@ -54,6 +57,8 @@ public:
         max_size = count;
         idx = 0;
         buf_size = 0;
+        read_count = 0;
+        write_count = 0;
     }
 
     virtual ~RingBufferWithPool()
@@ -101,9 +106,21 @@ public:
         return true;
     }
 
+    auto get_read_count() {
+        std::lock_guard<std::mutex> lg(mtx);
+        return read_count;
+    }
+
+    auto get_write_count() {
+        std::lock_guard<std::mutex> lg(mtx);
+        return write_count;
+    }
+
     void Read(T *dst, size_t size, bool latest = false)
     {
         std::lock_guard<std::mutex> lg(mtx);
+
+        read_count++;
 
 #ifndef NDEBUG
         std::cout << "[RingBufferWithPool] queue size = " << buffers.size() << ", " << pool.size() << std::endl;
@@ -164,6 +181,8 @@ public:
     {
         std::lock_guard<std::mutex> lg(mtx);
 
+        write_count++;
+
         if (pool.size() < max_size || pool.empty() || !src || size == 0) return nullptr;
 
         T *dst = nullptr;
@@ -197,11 +216,16 @@ private:
 
     std::mutex mtx;
 
+    uint64_t read_count;
+    uint64_t write_count;
+
 public:
     RingBufferAsync() = delete;
     RingBufferAsync(int count)
     {
         max_size = count;
+        read_count = 0;
+        write_count = 0;
     }
 
     virtual ~RingBufferAsync()
@@ -209,9 +233,21 @@ public:
         ;
     }
 
+    auto get_read_count() {
+        std::lock_guard<std::mutex> lg(mtx);
+        return read_count;
+    }
+
+    auto get_write_count() {
+        std::lock_guard<std::mutex> lg(mtx);
+        return write_count;
+    }
+
     T Read(bool latest = false)
     {
         std::lock_guard<std::mutex> lg(mtx);
+
+        read_count++;
 
 #ifndef NDEBUG
         std::cout << "[RingBufferAsync] queue size = " << buffers.size() << std::endl;
@@ -251,6 +287,8 @@ public:
     void Write(T val)
     {
         std::lock_guard<std::mutex> lg(mtx);
+
+        write_count++;
 
         if (buffers.size() < max_size) {
             buffers.push(val);

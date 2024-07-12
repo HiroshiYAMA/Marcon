@@ -102,6 +102,7 @@ extern void display_texture(GLuint texID, GLsizei width, GLsizei height, std::st
     const std::vector<std::string> info_str = {});
 
 // ボタンの色(In-Active, Hovered, Active)を設定する //
+extern void set_style_color(float hue, float sat, float val);
 extern void set_style_color(float hue);
 extern void set_style_color_inactive(float hue);
 

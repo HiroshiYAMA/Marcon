@@ -14,6 +14,8 @@ set(IMGUI_DIR "${EXTERNAL_DIR}/imgui")
 add_executable(${target}
     ${SRC_DIR}/marcon.cpp
     ${SRC_DIR}/gui_utils.cpp
+    ${SRC_DIR}/CGI.cpp
+    ${SRC_DIR}/CGI_cmd_parameter.cpp
 
     ${IMGUI_DIR}/imgui.cpp
     ${IMGUI_DIR}/imgui_demo.cpp

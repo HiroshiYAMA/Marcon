@@ -29,6 +29,7 @@
 #include "gui_utils.h"
 #include "RemoteServer.h"
 #include "ProcLiveView.h"
+#include "CGI.h"
 
 #if __has_include(<charconv>)
 #include <charconv>
@@ -60,6 +61,12 @@ private:
     std::unique_ptr<ProcLiveView> proc_live_view;
     std::thread thd_proc_live_view;
     bool is_display_image;
+
+    std::unique_ptr<CGI> cgi;
+    std::thread thd_cgi;
+    std::unique_ptr<CGI> cgi_set;
+
+    StopWatch sw;
 
     // template<typename F_get, typename F_set, typename F_get_list, typename F_format, typename F_format_release, typename T>
     // void put_item_change_property(
@@ -168,8 +175,19 @@ private:
     {
         ImGui::PushID("Print_Fps");
 
-        auto [lap_cur, lap_ave] = proc_live_view->get_lap();
-        ImGui::Text("%.2f(ms) / %.2f(fps)", lap_ave, 1'000.0 / lap_ave);
+        {
+            auto [lap_cur, lap_ave] = proc_live_view->get_lap();
+            ImGui::Text("LiveView %.2f(ms) / %.2f(fps)", lap_ave, 1'000.0 / lap_ave);
+        }
+
+        {
+            auto [lap_cur, lap_ave] = cgi->get_lap();
+            ImGui::Text("CGI %.2f(ms) / %.2f(fps)", lap_ave, 1'000.0 / lap_ave);
+        }
+        {
+            auto [lap_cur, lap_ave] = cgi_set->get_lap();
+            ImGui::Text("CGI(set) %.2f(ms) / %.2f(fps)", lap_ave, 1'000.0 / lap_ave);
+        }
 
         ImGui::PopID();
     }
@@ -233,10 +251,191 @@ private:
         ImGui::PopID();
     }
 
-    // shutter speed control.
-    void show_panel_shutter_speed_control()
+    // shutter control.
+    void show_panel_shutter_control()
     {
-        ImGui::PushID("Shutter_Speed_Control");
+        ImGui::PushID("Shutter_Control");
+
+        static const std::vector<std::pair<CGICmd::em_ExposureShutterModeState, std::string>> exposure_shutter_mode_state = {
+            {CGICmd::ExposureShutterModeState_AUTO, "Auto"},
+            {CGICmd::ExposureShutterModeState_SPEED, "Speed"},
+            {CGICmd::ExposureShutterModeState_ANGLE, "Angle"},
+            {CGICmd::ExposureShutterModeState_ECS, "ECS"},
+            {CGICmd::ExposureShutterModeState_OFF, "Off"},
+        };
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto &state = imaging.ExposureShutterModeState;
+
+        // select shutter mode.
+        {
+            auto make_combo_vec = [](auto &vec, auto &combo_vec, auto &len_max) -> void {
+                for (auto &e : vec) {
+                    auto &[flag, str] = e;
+                    len_max = std::max(len_max, str.length() * 8);
+                    for (auto i = 0; i < str.size(); i++) {
+                        combo_vec.push_back(str[i]);
+                    }
+                    combo_vec.push_back('\0');
+                }
+                combo_vec.push_back('\0');
+            };
+
+            auto make_listbox_vec = [](auto &vec, auto &listbox_vec, auto &len_max) -> void {
+                for (auto &e : vec) {
+                    auto &[k, v] = e;
+                    len_max = std::max(len_max, v.length() * 8);
+                    listbox_vec.push_back(v.c_str());
+                }
+            };
+
+            auto &vec = exposure_shutter_mode_state;
+            {
+                ImGui::PushID("##EXPOSURE_SHUTTER_MODE_STATE");
+
+                ImGuiStyle& style = ImGui::GetStyle();
+
+                ImGui::BeginGroup();
+
+                float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 3;
+                float child_h = (ImGui::GetContentRegionAvail().y - 4 * style.ItemSpacing.y);
+                if (child_w < 1.0f) child_w = 1.0f;
+                if (child_h < 1.0f) child_h = 1.0f;
+                if (ImGui::BeginChild("CHILD_EXPOSURE_SHUTTER_MODE_STATE", ImVec2(child_w, 200.0f), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+                {
+                    ImVec2 p = ImGui::GetCursorScreenPos();
+                    ImVec2 win_size = ImGui::GetWindowSize();
+
+                    auto itr = std::find_if(vec.begin(), vec.end(), [&state](auto &e){ return e.first == state; });
+                    bool is_changed = false;
+
+                    // centering.
+                    p.x += (win_size.x / 2) - 20.0f;
+                    ImGui::SetCursorScreenPos(p);
+                    if (ImGui::ArrowButton("##UP", ImGuiDir_Up)) {
+                        if (itr > vec.begin()) itr--;
+                        is_changed = true;
+                    }
+
+                    if (ImGui::BeginChild("CHILD_CHILD_EXPOSURE_SHUTTER_MODE_STATE", ImVec2(-1, 80.0f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
+                    {
+                        ImGuiStyle& style = ImGui::GetStyle();
+                        auto fr = style.FrameRounding;
+                        auto gr = style.GrabRounding;
+
+                        style.FrameRounding = 0.0f;
+                        style.GrabRounding = 0.0f;
+
+                        auto fb = style.FrameBorderSize;
+
+                        for (auto &[k, v]: vec) {
+                            if (k == state) {
+                                set_style_color(4.0f / 7.0f, 0.9f, 0.9f);
+
+                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
+                                ImGui::SetScrollHereY(0.5f); // 0.0f:top, 0.5f:center, 1.0f:bottom
+
+                                reset_style_color();
+
+                            } else {
+                                style.FrameBorderSize = 0.0f;
+                                set_style_color(5.0f, 0.1f, 0.1f);
+
+                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
+
+                                reset_style_color();
+                                style.FrameBorderSize = fb;
+                            }
+                        }
+
+                        style.FrameRounding = fr;
+                        style.GrabRounding = gr;
+                    }
+                    ImGui::EndChild();
+
+                    // centering.
+                    auto pp = ImGui::GetCursorScreenPos();
+                    pp.x = p.x;
+                    ImGui::SetCursorScreenPos(pp);
+                    if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down)) {
+                        itr++;
+                        if (itr == vec.end()) itr--;
+                        is_changed = true;
+                    }
+
+                    if (true || is_changed) {
+                        auto &[k, v] = *itr;
+                        imaging.ExposureShutterModeState = k;   // pre-set for GUI.
+                        cgi_set->set_imaging_ExposureShutterModeState(k);
+                        // auto [lap, lap_ave] = sw.lap();
+                        // std::cout << "LAP time(ms) = " << lap << " / " << lap_ave << std::endl;
+                    }
+
+                }
+                ImGui::EndChild();
+
+                ImGui::EndGroup();
+
+                ImGui::PopID();
+            }
+        }
+
+        // display shutter value.
+        {
+            switch (state) {
+            case CGICmd::ExposureShutterModeState_SPEED:
+            case CGICmd::ExposureShutterModeState_AUTO:
+                {
+                    auto project = cgi->inquiry_project();
+                    auto frame_rate = project.RecFormatFrequency;
+                    auto idx = imaging.ExposureExposureTime;
+                    auto idx_min = imaging.ExposureExposureTimeRange.min;
+                    auto idx_max = imaging.ExposureExposureTimeRange.max;
+
+                    std::string str = "---";
+                    if (CGICmd::exposure_exposure_time.contains(frame_rate)) {
+                        auto &lst = CGICmd::exposure_exposure_time[frame_rate];
+                        using e_type = decltype(lst.front());
+                        auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
+                        if (itr != lst.end()) {
+                            str = (*itr).second;
+                        }
+                    }
+                    ImGui::Text("%s", str.c_str());
+                }
+                break;
+
+            case CGICmd::ExposureShutterModeState_ANGLE:
+                {
+                    auto idx = imaging.ExposureAngle;
+                    auto idx_min = imaging.ExposureAngleRange.min;
+                    auto idx_max = imaging.ExposureAngleRange.max;
+
+                    std::string str = "---";
+                    auto &lst = CGICmd::exposure_angle;
+                    using e_type = decltype(lst.front());
+                    auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
+                    if (itr != lst.end()) {
+                        str = (*itr).second;
+                    }
+                    ImGui::Text("%s", str.c_str());
+                }
+                break;
+
+            case CGICmd::ExposureShutterModeState_ECS:
+                {
+                    auto idx = imaging.ExposureECS;
+                    auto val = imaging.ExposureECSValue;
+                    auto val_f = val / 1000.0f;
+                    ImGui::Text("[%d] %.2f", idx, val_f);
+                }
+                break;
+
+            case CGICmd::ExposureShutterModeState_OFF:
+            default:
+                ;
+            }
+        }
 
         if (ImGui::Button("Shutter")) {
             ;
@@ -375,7 +574,7 @@ public:
         is_display_image = false;
 
         auto is_connected = CONNECT();
-        camera_connection_stat = is_connected ? em_Camera_Connection_State::CONNECTED : em_Camera_Connection_State::DISCONNECTED;
+        camera_connection_stat.store(is_connected ? em_Camera_Connection_State::CONNECTED : em_Camera_Connection_State::DISCONNECTED);
     }
 
     virtual ~Gui_Window_Camera() {
@@ -437,10 +636,16 @@ public:
 
             ImGui::Separator();
 
-            show_panel_shutter_speed_control();
+            show_panel_shutter_control();
             show_panel_white_balance_control();
             show_panel_iso_sensitivity_control();
             show_panel_f_number_control();
+            // ND.
+            // FPS.
+
+            // PTZ
+            // focus.
+            // Stream setting.
 
             if (ImGui::Button("Live View")) {
                 is_display_image = true;                
@@ -516,6 +721,8 @@ public:
             }
 
             if (ImGui::Button("Login")) {
+                cgi->set_account(remote_server.username, remote_server.password);
+                cgi_set->set_account(remote_server.username, remote_server.password);
                 camera_connection_stat.store(em_Camera_Connection_State::CONNECTED);
             }
         }
@@ -538,7 +745,30 @@ public:
             break;
 
         case em_Camera_Connection_State::CONNECTED:
-            is_window_opened = display_camera_window(win_id);
+            // check_auth();
+            {
+                if (!cgi->is_auth() || !cgi_set->is_auth()) {
+                    camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
+                    break;
+                }
+            }
+
+            // if CGI is OK?
+            {
+                auto is_update = cgi->is_update_cmd_info();
+
+                if (is_update) {
+                    cgi->fetch();
+                    // std::cout << "updated cmd_info. ===================================" << std::endl;
+                } else {
+                    // std::cout << "no updated cmd_info." << std::endl;
+                }
+
+                is_window_opened = display_camera_window(win_id);
+
+                if (is_update) cgi->next();
+            }
+
             is_display_image = display_live_view(win_id);
             break;
 
@@ -564,12 +794,25 @@ public:
 
         if (!thd_proc_live_view.joinable()) {
             proc_live_view.reset(new ProcLiveView(remote_server, tex_width, tex_height));
-            if (proc_live_view->is_running()) {
+            if (proc_live_view && proc_live_view->is_running()) {
                 std::thread thd_tmp{ [&]{ proc_live_view->run(); }};
                 thd_proc_live_view = std::move(thd_tmp);
                 ret = true;
             }
         }
+
+        if (!thd_cgi.joinable()) {
+            cgi = std::make_unique<CGI>(remote_server.ip_address, stoi(remote_server.port), remote_server.username, remote_server.password);
+            if (cgi && cgi->is_running()) {
+                std::thread thd_tmp{ [&]{ cgi->run(); }};
+                thd_cgi = std::move(thd_tmp);
+                ret = true;
+            } else {
+                ret = false;
+            }
+        }
+        cgi_set = std::make_unique<CGI>(remote_server.ip_address, stoi(remote_server.port), remote_server.username, remote_server.password);
+        if (!cgi_set) ret = false;
 
         return ret;
     }
@@ -579,6 +822,11 @@ public:
         if (proc_live_view) {
             if (proc_live_view->is_running()) proc_live_view->stop();
             if (thd_proc_live_view.joinable()) thd_proc_live_view.join();
+        }
+
+        if (cgi) {
+            if (cgi->is_running()) cgi->stop();
+            if (thd_cgi.joinable()) thd_cgi.join();
         }
 
         return true;

@@ -371,6 +371,12 @@ void display_texture(GLuint texID, GLsizei width, GLsizei height, std::string ti
 }
 
 // ボタンの色(In-Active, Hovered, Active)を設定する //
+void set_style_color(float hue, float sat, float val)
+{
+    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(hue, sat, val));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(hue, sat, val));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(hue, sat, val));
+}
 void set_style_color(float hue)
 {
     ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(hue, 0.5f, 0.5f));

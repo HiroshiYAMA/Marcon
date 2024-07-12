@@ -336,16 +336,14 @@ public:
             glfwPollEvents();
 
             {
-                auto io = ImGui::GetIO();
-
                 // Quit program. key: Shift + Q.
-                if (io.KeysDown[ImGuiKey_Q] && io.KeyShift) {
+                if (ImGui::IsKeyPressed(ImGuiKey_Q) && ImGui::IsKeyDown(ImGuiKey_ModShift)) {
                     is_loop = false;
                 }
 
                 // switch full screen / window. key: Enter.
                 static auto k_enter_pre = false;
-                auto k_enter = io.KeysDown[ImGuiKey_F11];
+                auto k_enter = ImGui::IsKeyPressed(ImGuiKey_F8);
                 if (!k_enter_pre && k_enter) {
                     full_screen = !full_screen;
                     if (full_screen) {

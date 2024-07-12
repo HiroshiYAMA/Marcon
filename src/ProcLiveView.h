@@ -65,10 +65,6 @@ private:
 
     std::unique_ptr<RingBufferWithPool<uint8_t>> bitmap_buf_list;
 
-    // Metadata.
-    int idx_in;
-    int idx_out;
-
 // construct GStreamer pipeline.
 std::string make_gst_pipeline(const st_RemoteServer &remote_server)
 {
@@ -121,9 +117,6 @@ public:
         lv_info_list = std::make_unique<RingBufferAsync<st_LiveViewInfo>>(RING_BUF_SZ);
 
         bitmap_buf_list = std::make_unique<RingBufferWithPool<uint8_t>>(RING_BUF_SZ);
-
-        idx_in = 0;
-        idx_out = double_buffer_metadata ? 1 : 0;
     }
 
     virtual ~ProcLiveView() {}

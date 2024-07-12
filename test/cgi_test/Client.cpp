@@ -48,6 +48,7 @@ int main(int ac, char *av[])
 	std::stringstream ss;
 	ss << "http://"
 		<< server_adr
+		<< ":" << server_port
 		<< "/";
 	std::string referer_str = ss.str();
 	cli.set_default_headers({
