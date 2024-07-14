@@ -28,8 +28,74 @@ using namespace web;
 using namespace web::http;
 using namespace web::http::client;
 
-#include <json.hpp>
+#include "json.hpp"
 using njson = nlohmann::json;
+
+#include <thread>
+#include <chrono>
+#include <list>
+/////////////////////////////////////////////////////////////////////
+// StopWatch.
+/////////////////////////////////////////////////////////////////////
+
+class StopWatch
+{
+    using clock = std::chrono::steady_clock;
+    static constexpr size_t queue_max = 100;
+private:
+    clock::time_point st, et;
+    double ave;
+    std::list<double> lap_list;
+
+public:
+    StopWatch()
+    {
+        start();
+    }
+
+    virtual ~StopWatch() {}
+
+    clock::time_point start()
+    {
+        st = clock::now();
+        return st;
+    }
+
+    clock::time_point stop()
+    {
+        et = clock::now();
+        return et;
+    }
+
+    double duration()
+    {
+        auto dt = et - st;
+        auto dt_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(dt).count();
+        double dt_ms = dt_ns / 1'000.0f / 1'000.0f;
+
+        lap_list.push_back(dt_ms);
+        if (lap_list.size() > queue_max) lap_list.pop_front();
+
+        return dt_ms;
+    }
+
+    double lap_ave()
+    {
+        ave = std::accumulate(lap_list.begin(), lap_list.end(), 0.0) / lap_list.size();
+        return ave;
+    }
+
+    std::tuple<double, double> lap()
+    {
+        et = stop();
+        auto dt_ms = duration();
+        lap_ave();
+        st = et;
+
+        return { dt_ms, ave };
+    }
+
+};
 
 pplx::task<void> Get(const std::string &host, int port, const std::string &msg)
 {
@@ -95,15 +161,32 @@ int main(int ac, char *av[])
 	int server_port = std::stoi(av[2]);
 	std::string cgi_message = av[3];
 
+	StopWatch sw, sw2;
+
 	try
 	{
-		Get(server_adr, server_port, cgi_message).wait();
+		for (auto i = 0; i < 1; i++) {
+			sw.start();
+			// Get(server_adr, server_port, cgi_message).wait();
+			auto a = Get(server_adr, server_port, cgi_message);
+			auto [dt_ms, ave] = sw.lap();
+			std::cout << "time: " << dt_ms << " , " << ave << std::endl;
+
+			sw2.start();
+			a.wait();
+			auto [dt_ms2, ave2] = sw2.lap();
+			std::cout << "time(response): " << dt_ms2 << " , " << ave2 << std::endl;
+
+			std::this_thread::sleep_for(std::chrono::milliseconds(33));
+		}
 	}
 	catch (const std::exception &e)
 	{
 		std::cout << "Error " << e.what() << std::endl;
 		return EXIT_FAILURE;
 	}
+
+	// std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 	return EXIT_SUCCESS;
 }

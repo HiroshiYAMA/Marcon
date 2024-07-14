@@ -24,16 +24,95 @@
 #include <iostream>
 
 #define CPPHTTPLIB_OPENSSL_SUPPORT
-#include <httplib.h>
+#include "httplib.h"
 
-#include <json.hpp>
+#include "json.hpp"
 using njson = nlohmann::json;
+
+#include <thread>
+#include <chrono>
+/////////////////////////////////////////////////////////////////////
+// StopWatch.
+/////////////////////////////////////////////////////////////////////
+
+class StopWatch
+{
+    using clock = std::chrono::steady_clock;
+    static constexpr size_t queue_max = 100;
+private:
+    clock::time_point st, et;
+    double ave;
+    std::list<double> lap_list;
+
+public:
+    StopWatch()
+    {
+        start();
+    }
+
+    virtual ~StopWatch() {}
+
+    clock::time_point start()
+    {
+        st = clock::now();
+        return st;
+    }
+
+    clock::time_point stop()
+    {
+        et = clock::now();
+        return et;
+    }
+
+    double duration()
+    {
+        auto dt = et - st;
+        auto dt_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(dt).count();
+        double dt_ms = dt_ns / 1'000.0f / 1'000.0f;
+
+        lap_list.push_back(dt_ms);
+        if (lap_list.size() > queue_max) lap_list.pop_front();
+
+        return dt_ms;
+    }
+
+    double lap_ave()
+    {
+        ave = std::accumulate(lap_list.begin(), lap_list.end(), 0.0) / lap_list.size();
+        return ave;
+    }
+
+    std::tuple<double, double> lap()
+    {
+        et = stop();
+        auto dt_ms = duration();
+        lap_ave();
+        st = et;
+
+        return { dt_ms, ave };
+    }
+
+};
+
+inline auto print_sw_lap = [](StopWatch &sw, int &cnt, const std::string &str) -> void {
+    auto [dt_ms, dt_ave] = sw.lap();
+    if (cnt++ > 200) {
+#ifdef USE_JETSON_UTILS
+        // // cudaStreamSynchronize(NULL);
+        // cudaDeviceSynchronize();
+#endif
+        std::cout << str << dt_ms << "(msec), " << dt_ave << "(msec)." << std::endl;
+        cnt = 0;
+    }
+};
 
 int main(int ac, char *av[])
 {
 	std::string server_adr = av[1];
 	int server_port = std::stoi(av[2]);
 	std::string cgi_message = av[3];
+
+	StopWatch sw;
 
 	// HTTP
 	httplib::Client cli(server_adr, server_port);
@@ -55,40 +134,47 @@ int main(int ac, char *av[])
 		{ "Referer", referer_str }
 	});
 
-	auto res = cli.Get(cgi_message);
+	for (auto i = 0; i < 1; i++) {
+		sw.start();
+		auto res = cli.Get(cgi_message);
+		auto [dt_ms, ave] = sw.lap();
+		std::cout << "time: " << dt_ms << " , " << ave << std::endl;
 
-	if (res) {
-		auto st = res->status;
-		auto msg = httplib::status_message(st);
-		switch (st) {
-			using SC = httplib::StatusCode;
-		case SC::Unauthorized_401:
-			std::cout << "ERROR (" << st << ") : " << msg << std::endl;
-			break;
-		case SC::OK_200:
-			{
-				std::cout << "(" << st << ")" << msg << std::endl;
-				std::cout << "body : " << res->body << std::endl;
+		if (res) {
+			auto st = res->status;
+			auto msg = httplib::status_message(st);
+			switch (st) {
+				using SC = httplib::StatusCode;
+			case SC::Unauthorized_401:
+				std::cout << "ERROR (" << st << ") : " << msg << std::endl;
+				break;
+			case SC::OK_200:
+				{
+					std::cout << "(" << st << ")" << msg << std::endl;
+					std::cout << "body : " << res->body << std::endl;
 
-				try
-				{
-					auto j = njson::parse(res->body);
-					std::cout << "JSON " << j << std::endl;
-					auto s = j["system"];
-					auto ss = s["LanguageInfo"];
-					std::cout << "JSON: " << ss << std::endl;
-					auto jj = j["/system/LanguageInfo"_json_pointer];
-					std::cout << "JSON : " << jj << std::endl;
+					// try
+					// {
+					// 	auto j = njson::parse(res->body);
+					// 	std::cout << "JSON " << j << std::endl;
+					// 	auto s = j["system"];
+					// 	auto ss = s["LanguageInfo"];
+					// 	std::cout << "JSON: " << ss << std::endl;
+					// 	auto jj = j["/system/LanguageInfo"_json_pointer];
+					// 	std::cout << "JSON : " << jj << std::endl;
+					// }
+					// catch(const std::exception& e)
+					// {
+					// 	std::cerr << e.what() << '\n';
+					// }
 				}
-				catch(const std::exception& e)
-				{
-					std::cerr << e.what() << '\n';
-				}
+				break;
+			default:
+				;
 			}
-			break;
-		default:
-			;
 		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(33));
 	}
 
 	return EXIT_SUCCESS;
