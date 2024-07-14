@@ -13,6 +13,12 @@ git clone --recursive git@github.com:HiroshiYAMA/Marcon.git
 git submodule update --init --recursive
 ```
 
+## Requires
+[C++ REST SDK](https://github.com/microsoft/cpprestsdk) をインストールする。
+```bash
+sudo apt install libcpprest-dev
+```
+
 ## テストプログラムたち
 test ディレクトリ以下に置いてある。
 * [cgi_test](./test/cgi_test/)
