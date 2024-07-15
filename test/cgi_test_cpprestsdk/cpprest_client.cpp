@@ -106,7 +106,7 @@ pplx::task<void> Get(const std::string &host, int port, const std::string &msg)
 		bld.set_port(port);
 		bld.set_path(msg);
 
-		credentials cred("admin", "Admin_1234");
+		credentials cred("user_name", "password");
 		http_client_config cfg;
 		cfg.set_credentials(cred);
 		// std::cout
