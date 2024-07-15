@@ -23,14 +23,12 @@
 
 #include <iostream>
 
-#define CPPHTTPLIB_OPENSSL_SUPPORT
-#include "httplib.h"
-
 #include "json.hpp"
 using njson = nlohmann::json;
 
 #include <thread>
 #include <chrono>
+#include <list>
 /////////////////////////////////////////////////////////////////////
 // StopWatch.
 /////////////////////////////////////////////////////////////////////
@@ -94,19 +92,9 @@ public:
 
 };
 
-inline auto print_sw_lap = [](StopWatch &sw, int &cnt, const std::string &str) -> void {
-	auto [dt_ms, dt_ave] = sw.lap();
-	if (cnt++ > 200) {
-#ifdef USE_JETSON_UTILS
-		// // cudaStreamSynchronize(NULL);
-		// cudaDeviceSynchronize();
-#endif
-		std::cout << str << dt_ms << "(msec), " << dt_ave << "(msec)." << std::endl;
-		cnt = 0;
-	}
-};
+#include <cpr/cpr.h>
 
-int main(int ac, char *av[])
+int main(int a, char *av[])
 {
 	std::string server_adr = av[1];
 	int server_port = std::stoi(av[2]);
@@ -114,64 +102,38 @@ int main(int ac, char *av[])
 
 	StopWatch sw;
 
-	// HTTP
-	httplib::Client cli(server_adr, server_port);
-
-	// HTTPS
-	// httplib::Client cli("https://cpp-httplib-server.yhirose.repl.co");
-
-	// Digest.
-	cli.set_digest_auth("user_name", "password");
-
-	// for Referer check.
 	std::stringstream ss;
-	ss << "http://"
-		<< server_adr
-		<< ":" << server_port
-		<< "/";
-	std::string referer_str = ss.str();
-	cli.set_default_headers({
-		{ "Referer", referer_str }
-	});
+	ss << "http://" << server_adr << ":" << server_port << cgi_message;
+	std::string url_str = ss.str();
+	auto url = cpr::Url{ url_str };
 
-	for (auto i = 0; i < 1; i++) {
+	auto auth = cpr::Authentication{ "user_name", "password", cpr::AuthMode::DIGEST };
+
+	ss.clear();
+	ss << "http://" << server_adr << ":" << server_port;
+	std::string referer_str = ss.str();
+	auto header = cpr::Header{
+		{ "Referer", referer_str },
+	};
+
+	for (auto i = 0; i < 10; i++) {
 		sw.start();
-		auto res = cli.Get(cgi_message);
+		cpr::Response r = cpr::Get(url, auth, header);
 		auto [dt_ms, ave] = sw.lap();
 		std::cout << "time: " << dt_ms << " , " << ave << std::endl;
 
-		if (res) {
-			auto st = res->status;
-			auto msg = httplib::status_message(st);
-			switch (st) {
-				using SC = httplib::StatusCode;
-			case SC::Unauthorized_401:
-				std::cout << "ERROR (" << st << ") : " << msg << std::endl;
-				break;
-			case SC::OK_200:
-				{
-					std::cout << "(" << st << ")" << msg << std::endl;
-					std::cout << "body : " << res->body << std::endl;
-
-					// try
-					// {
-					// 	auto j = njson::parse(res->body);
-					// 	std::cout << "JSON " << j << std::endl;
-					// 	auto s = j["system"];
-					// 	auto ss = s["LanguageInfo"];
-					// 	std::cout << "JSON: " << ss << std::endl;
-					// 	auto jj = j["/system/LanguageInfo"_json_pointer];
-					// 	std::cout << "JSON : " << jj << std::endl;
-					// }
-					// catch(const std::exception& e)
-					// {
-					// 	std::cerr << e.what() << '\n';
-					// }
-				}
-				break;
-			default:
-				;
-			}
+		auto status = r.status_code;
+		auto reason = r.reason;
+		switch (status) {
+		case cpr::status::HTTP_OK:
+			std::cout << "(" << status << ")" << reason << std::endl;
+			std::cout << "body : " << r.text << std::endl;
+			break;
+		case cpr::status::HTTP_UNAUTHORIZED:
+			std::cout << "ERROR (" << status << ") : " << reason << std::endl;
+			break;
+		default:
+			std::cout << "(" << status << ") : " << reason << std::endl;
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));
