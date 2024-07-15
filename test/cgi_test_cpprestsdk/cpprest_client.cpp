@@ -106,7 +106,7 @@ pplx::task<void> Get(const std::string &host, int port, const std::string &msg)
 		bld.set_port(port);
 		bld.set_path(msg);
 
-		credentials cred("user_name", "password");
+		credentials cred("admin", "Admin_1234");
 		http_client_config cfg;
 		cfg.set_credentials(cred);
 		// std::cout
@@ -120,16 +120,16 @@ pplx::task<void> Get(const std::string &host, int port, const std::string &msg)
 	
 		http_client client(bld.to_uri(), cfg);
 
-		// auto uri = client.base_uri();
-		// std::cout
-		// 	<< "host: " << uri.host() << std::endl
-		// 	<< "port: " << uri.port() << std::endl
-		// 	<< "path: " << uri.path() << std::endl
-		// 	<< "query:" << uri.query() << std::endl
-		// 	<< "scheme: " << uri.scheme() << std::endl
-		// 	<< "to_string: " << uri.to_string() << std::endl
-		// 	<< "user_info: " << uri.user_info() << std::endl
-		// 	<< std::endl;
+		auto uri = client.base_uri();
+		std::cout
+			<< "host: " << uri.host() << std::endl
+			<< "port: " << uri.port() << std::endl
+			<< "path: " << uri.path() << std::endl
+			<< "query:" << uri.query() << std::endl
+			<< "scheme: " << uri.scheme() << std::endl
+			<< "to_string: " << uri.to_string() << std::endl
+			<< "user_info: " << uri.user_info() << std::endl
+			<< std::endl;
 
 		http_request request(methods::GET);
 
@@ -146,11 +146,14 @@ pplx::task<void> Get(const std::string &host, int port, const std::string &msg)
 
 	}).then([](http_response response)
 	{
-		if (response.status_code() == status_codes::OK)
+		auto status = response.status_code();
+		if (status == status_codes::OK)
 		{
 			// レスポンスを文字列として取得後、標準出力する
 			auto body = response.extract_string();
 			std::cout << body.get().c_str() << std::endl;
+		} else {
+			std::cout << "[RESPONSE STATUS] : " << status << std::endl;
 		}
 	});
 }
@@ -163,22 +166,36 @@ int main(int ac, char *av[])
 
 	StopWatch sw, sw2;
 
+	// constexpr char *cmd_list[] = {
+	// 	"/command/imaging.cgi?ExposureAutoShutterEnable=on",
+	// 	"/command/imaging.cgi?ExposureShutterMode=speed&ExposureAutoShutterEnable=off&ExposureShutterSpeedEnable=on&ExposureECSEnable=off",
+	// 	"/command/imaging.cgi?ExposureShutterMode=angle&ExposureAutoShutterEnable=off&ExposureECSEnable=off",
+	// 	"/command/imaging.cgi?ExposureShutterMode=speed&ExposureAutoShutterEnable=off&ExposureShutterSpeedEnable=on&ExposureECSEnable=on",
+	// 	"/command/imaging.cgi?ExposureShutterMode=speed&ExposureAutoShutterEnable=off&ExposureShutterSpeedEnable=off",
+	// };
+
 	try
 	{
+		pplx::task<void> a;
 		for (auto i = 0; i < 1; i++) {
+			// auto idx = i % std::size(cmd_list);
 			sw.start();
-			// Get(server_adr, server_port, cgi_message).wait();
-			auto a = Get(server_adr, server_port, cgi_message);
+			Get(server_adr, server_port, cgi_message).wait();
+			// a = Get(server_adr, server_port, cgi_message);
+			// a = Get(server_adr, server_port, cmd_list[idx]);
 			auto [dt_ms, ave] = sw.lap();
 			std::cout << "time: " << dt_ms << " , " << ave << std::endl;
 
-			sw2.start();
-			a.wait();
-			auto [dt_ms2, ave2] = sw2.lap();
-			std::cout << "time(response): " << dt_ms2 << " , " << ave2 << std::endl;
-
 			std::this_thread::sleep_for(std::chrono::milliseconds(33));
 		}
+		// for (auto i = 0; i < 10; i++) {
+		// 	sw2.start();
+		// 	a.wait();
+		// 	auto [dt_ms2, ave2] = sw2.lap();
+		// 	std::cout << "time(response): " << dt_ms2 << " , " << ave2 << std::endl;
+
+		// 	std::this_thread::sleep_for(std::chrono::milliseconds(33));
+		// }
 	}
 	catch (const std::exception &e)
 	{
