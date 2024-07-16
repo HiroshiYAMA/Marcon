@@ -100,22 +100,31 @@ int main(int a, char *av[])
 	int server_port = std::stoi(av[2]);
 	std::string cgi_message = av[3];
 
-	StopWatch sw;
+	StopWatch sw, sw2;
 
 	std::stringstream ss;
-	ss << "http://" << server_adr << ":" << server_port << cgi_message;
-	std::string url_str = ss.str();
+	ss << "http://" << server_adr << ":" << server_port;
+	std::string url_base = ss.str();
+	std::string url_str = url_base + cgi_message;
 	auto url = cpr::Url{ url_str };
 
 	auto auth = cpr::Authentication{ "user_name", "password", cpr::AuthMode::DIGEST };
 
-	ss.clear();
-	ss << "http://" << server_adr << ":" << server_port;
-	std::string referer_str = ss.str();
+	std::string referer_str = url_base;
 	auto header = cpr::Header{
 		{ "Referer", referer_str },
 	};
 
+	constexpr std::string_view cmd_list[] = {
+		"/command/imaging.cgi?ExposureAutoShutterEnable=on",
+		"/command/imaging.cgi?ExposureShutterMode=speed&ExposureAutoShutterEnable=off&ExposureShutterSpeedEnable=on&ExposureECSEnable=off",
+		"/command/imaging.cgi?ExposureShutterMode=angle&ExposureAutoShutterEnable=off&ExposureECSEnable=off",
+		"/command/imaging.cgi?ExposureShutterMode=speed&ExposureAutoShutterEnable=off&ExposureShutterSpeedEnable=on&ExposureECSEnable=on",
+		"/command/imaging.cgi?ExposureShutterMode=speed&ExposureAutoShutterEnable=off&ExposureShutterSpeedEnable=off",
+		"/command/inquiry.cgi?inqjson=imaging",
+	};
+
+#if 0
 	for (auto i = 0; i < 10; i++) {
 		sw.start();
 		cpr::Response r = cpr::Get(url, auth, header);
@@ -124,20 +133,68 @@ int main(int a, char *av[])
 
 		auto status = r.status_code;
 		auto reason = r.reason;
-		switch (status) {
-		case cpr::status::HTTP_OK:
-			std::cout << "(" << status << ")" << reason << std::endl;
-			std::cout << "body : " << r.text << std::endl;
-			break;
-		case cpr::status::HTTP_UNAUTHORIZED:
-			std::cout << "ERROR (" << status << ") : " << reason << std::endl;
-			break;
-		default:
-			std::cout << "(" << status << ") : " << reason << std::endl;
+		if (status > 0) {
+			if (cpr::status::is_success(status)) {
+				std::cout << "(" << status << ")" << reason << std::endl;
+				std::cout << "body : " << r.text << std::endl;
+			} else if (cpr::status::is_client_error(status)) {
+				std::cout << "ERROR-client (" << status << ") : " << reason << std::endl;
+			} else if (cpr::status::is_server_error(status)) {
+				std::cout << "ERROR-server (" << status << ") : " << reason << std::endl;
+			} else {
+				std::cout << "(" << status << ") : " << reason << std::endl;
+			}
+		} else {
+			std::cerr << "Response ERROR : " << r.error.message << std::endl;
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));
 	}
+#else
+	std::vector<cpr::AsyncResponse> ar_list;
+	for (auto i = 0; i < std::size(cmd_list); i++) {
+		sw.start();
+
+		auto url = cpr::Url{ url_base + cmd_list[i].data() };
+		auto ar = cpr::GetAsync(url, auth, header);
+		ar.wait();	// for reliable execution.
+		ar_list.emplace_back(std::move(ar));
+
+		auto [dt_ms, ave] = sw.lap();
+		std::cout << "time: " << dt_ms << " , " << ave << std::endl;
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(17));
+	}
+
+	for (auto &ar : ar_list) {
+		sw2.start();
+
+		ar.wait();
+		auto r = ar.get();
+
+		auto [dt_ms, ave] = sw2.lap();
+		std::cout << "time(response): " << dt_ms << " , " << ave << std::endl;
+
+		auto status = r.status_code;
+		auto reason = r.reason;
+		if (status > 0) {
+			if (cpr::status::is_success(status)) {
+				std::cout << "(" << status << ")" << reason << std::endl;
+				std::cout << "body : " << r.text << std::endl;
+			} else if (cpr::status::is_client_error(status)) {
+				std::cout << "ERROR-client (" << status << ") : " << reason << std::endl;
+			} else if (cpr::status::is_server_error(status)) {
+				std::cout << "ERROR-server (" << status << ") : " << reason << std::endl;
+			} else {
+				std::cout << "(" << status << ") : " << reason << std::endl;
+			}
+		} else {
+			std::cerr << "Response ERROR : " << r.error.message << std::endl;
+		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(33));
+	}
+#endif
 
 	return EXIT_SUCCESS;
 }
