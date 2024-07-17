@@ -290,7 +290,7 @@ public:
         cmd_info_list = std::make_unique<RingBufferAsync<st_CmdInfo>>(RING_BUF_SZ);
         is_update_cmd_info_list.store(false);
 
-        constexpr auto CMD_MSG_BUF_SZ = 4;
+        constexpr auto CMD_MSG_BUF_SZ = 1;
         cmd_msg_list = std::make_unique<RingBufferAsync<std::string>>(CMD_MSG_BUF_SZ, false, false);
         is_update_cmd_msg_list.store(false);
         is_send_set_cmd.store(false);
