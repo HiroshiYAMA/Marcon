@@ -363,7 +363,7 @@ private:
                         is_changed = true;
                     }
 
-                    if (true || is_changed) {
+                    if (is_changed) {
                         auto &[k, v] = *itr;
                         imaging.ExposureShutterModeState = k;   // pre-set for GUI.
                         cgi_set->set_imaging_ExposureShutterModeState(k);
