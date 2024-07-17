@@ -35,6 +35,24 @@
 #include <charconv>
 #endif
 
+inline auto make_combo_vec = [](auto &vec, auto &combo_vec, auto &len_max) -> void {
+    for (auto &[k, v] : vec) {
+        len_max = std::max(len_max, v.length() * 8);
+        for (auto i = 0; i < v.size(); i++) {
+            combo_vec.push_back(v[i]);
+        }
+        combo_vec.push_back('\0');
+    }
+    combo_vec.push_back('\0');
+};
+
+inline auto make_listbox_vec = [](auto &vec, auto &listbox_vec, auto &len_max) -> void {
+    for (auto &[k, v] : vec) {
+        len_max = std::max(len_max, v.length() * 8);
+        listbox_vec.push_back(v.c_str());
+    }
+};
+
 enum class em_Camera_Connection_State : int {
     DISCONNECTED,
     NO_AUTH,
@@ -251,133 +269,146 @@ private:
         ImGui::PopID();
     }
 
+    template<typename T, typename Tfunc=std::function<void(T)>> void show_panel_select_value_listbox(
+        const char *id_str,
+        T &idx, T idx_min, T idx_max,
+        const std::list<std::pair<T, std::string>> &lst,
+        Tfunc func_set,
+        float key_delay = 0.275f, float key_rate = 0.050f
+    )
+    {
+        idx = static_cast<T>(std::clamp(static_cast<int>(idx), static_cast<int>(idx_min), static_cast<int>(idx_max)));
+
+        auto &vec = lst;
+        {
+            ImGui::PushID(id_str);
+
+            ImGuiStyle& style = ImGui::GetStyle();
+
+            ImGui::BeginGroup();
+
+            float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 3;
+            float child_h = (ImGui::GetContentRegionAvail().y - 4 * style.ItemSpacing.y);
+            if (child_w < 1.0f) child_w = 1.0f;
+            if (child_h < 1.0f) child_h = 1.0f;
+            if (ImGui::BeginChild("CHILD", ImVec2(child_w, 200.0f), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+            {
+                ImVec2 p = ImGui::GetCursorScreenPos();
+                ImVec2 win_size = ImGui::GetWindowSize();
+
+                auto &io = ImGui::GetIO();
+                auto key_delay_bkup = io.KeyRepeatDelay;
+                auto key_rate_bkup = io.KeyRepeatRate;
+                io.KeyRepeatDelay = key_delay;
+                io.KeyRepeatRate = key_rate;
+
+                auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
+                bool is_changed = false;
+
+                // centering.
+                p.x += (win_size.x / 2) - 20.0f;
+                ImGui::SetCursorScreenPos(p);
+                ImGui::PushButtonRepeat(true);
+                if (ImGui::ArrowButton("##UP", ImGuiDir_Up) || ImGui::IsKeyPressed(ImGuiKey_E)) {
+                    if (itr != vec.begin()) itr--;
+                    is_changed = true;
+                }
+                ImGui::PopButtonRepeat();
+
+                if (ImGui::BeginChild("CHILD_CHILD", ImVec2(-1, 140.0f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
+                {
+                    ImGuiStyle& style = ImGui::GetStyle();
+                    auto fr = style.FrameRounding;
+                    auto gr = style.GrabRounding;
+
+                    style.FrameRounding = 0.0f;
+                    style.GrabRounding = 0.0f;
+
+                    auto fb = style.FrameBorderSize;
+
+                    for (auto &[k, v]: vec) {
+                        if (k == idx) {
+                            set_style_color(4.0f / 7.0f, 0.9f, 0.9f);
+
+                            ImGui::Button(v.c_str(), ImVec2(-1, 0));
+                            ImGui::SetScrollHereY(0.5f); // 0.0f:top, 0.5f:center, 1.0f:bottom
+
+                            reset_style_color();
+
+                        } else {
+                            style.FrameBorderSize = 0.0f;
+                            set_style_color(5.0f, 0.1f, 0.1f);
+
+                            ImGui::Button(v.c_str(), ImVec2(-1, 0));
+
+                            reset_style_color();
+                            style.FrameBorderSize = fb;
+                        }
+                    }
+
+                    style.FrameRounding = fr;
+                    style.GrabRounding = gr;
+                }
+                ImGui::EndChild();
+
+                // centering.
+                auto pp = ImGui::GetCursorScreenPos();
+                pp.x = p.x;
+                ImGui::SetCursorScreenPos(pp);
+                ImGui::PushButtonRepeat(true);
+                if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down) || ImGui::IsKeyPressed(ImGuiKey_C)) {
+                    itr++;
+                    if (itr == vec.end()) itr--;
+                    is_changed = true;
+                }
+                ImGui::PopButtonRepeat();
+
+                io.KeyRepeatDelay = key_delay_bkup;
+                io.KeyRepeatRate = key_rate_bkup;
+
+                if (is_changed) {
+                    auto &[k, v] = *itr;
+                    idx = k;   // pre-set for GUI.
+                    func_set(k);
+                }
+
+            }
+            ImGui::EndChild();
+
+            ImGui::EndGroup();
+
+            ImGui::PopID();
+        }
+    }
+
     // shutter control.
     void show_panel_shutter_control()
     {
         ImGui::PushID("Shutter_Control");
-
-        static const std::vector<std::pair<CGICmd::em_ExposureShutterModeState, std::string>> exposure_shutter_mode_state = {
-            {CGICmd::ExposureShutterModeState_AUTO, "Auto"},
-            {CGICmd::ExposureShutterModeState_SPEED, "Speed"},
-            {CGICmd::ExposureShutterModeState_ANGLE, "Angle"},
-            {CGICmd::ExposureShutterModeState_ECS, "ECS"},
-            {CGICmd::ExposureShutterModeState_OFF, "Off"},
-        };
 
         auto &imaging = cgi->inquiry_imaging();
         auto &state = imaging.ExposureShutterModeState;
 
         // select shutter mode.
         {
-            auto make_combo_vec = [](auto &vec, auto &combo_vec, auto &len_max) -> void {
-                for (auto &e : vec) {
-                    auto &[flag, str] = e;
-                    len_max = std::max(len_max, str.length() * 8);
-                    for (auto i = 0; i < str.size(); i++) {
-                        combo_vec.push_back(str[i]);
-                    }
-                    combo_vec.push_back('\0');
-                }
-                combo_vec.push_back('\0');
+            static const std::list<std::pair<CGICmd::em_ExposureShutterModeState, std::string>> exposure_shutter_mode_state = {
+                {CGICmd::ExposureShutterModeState_AUTO, "Auto"},
+                {CGICmd::ExposureShutterModeState_SPEED, "Speed"},
+                {CGICmd::ExposureShutterModeState_ANGLE, "Angle"},
+                {CGICmd::ExposureShutterModeState_ECS, "ECS"},
+                {CGICmd::ExposureShutterModeState_OFF, "Off"},
             };
 
-            auto make_listbox_vec = [](auto &vec, auto &listbox_vec, auto &len_max) -> void {
-                for (auto &e : vec) {
-                    auto &[k, v] = e;
-                    len_max = std::max(len_max, v.length() * 8);
-                    listbox_vec.push_back(v.c_str());
-                }
-            };
+            auto f = [&](CGICmd::em_ExposureShutterModeState val) -> void { cgi->set_imaging_ExposureShutterModeState(val); };
 
-            auto &vec = exposure_shutter_mode_state;
-            {
-                ImGui::PushID("##EXPOSURE_SHUTTER_MODE_STATE");
-
-                ImGuiStyle& style = ImGui::GetStyle();
-
-                ImGui::BeginGroup();
-
-                float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 3;
-                float child_h = (ImGui::GetContentRegionAvail().y - 4 * style.ItemSpacing.y);
-                if (child_w < 1.0f) child_w = 1.0f;
-                if (child_h < 1.0f) child_h = 1.0f;
-                if (ImGui::BeginChild("CHILD_EXPOSURE_SHUTTER_MODE_STATE", ImVec2(child_w, 200.0f), ImGuiChildFlags_None, ImGuiWindowFlags_None))
-                {
-                    ImVec2 p = ImGui::GetCursorScreenPos();
-                    ImVec2 win_size = ImGui::GetWindowSize();
-
-                    auto itr = std::find_if(vec.begin(), vec.end(), [&state](auto &e){ return e.first == state; });
-                    bool is_changed = false;
-
-                    // centering.
-                    p.x += (win_size.x / 2) - 20.0f;
-                    ImGui::SetCursorScreenPos(p);
-                    if (ImGui::ArrowButton("##UP", ImGuiDir_Up)) {
-                        if (itr > vec.begin()) itr--;
-                        is_changed = true;
-                    }
-
-                    if (ImGui::BeginChild("CHILD_CHILD_EXPOSURE_SHUTTER_MODE_STATE", ImVec2(-1, 80.0f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
-                    {
-                        ImGuiStyle& style = ImGui::GetStyle();
-                        auto fr = style.FrameRounding;
-                        auto gr = style.GrabRounding;
-
-                        style.FrameRounding = 0.0f;
-                        style.GrabRounding = 0.0f;
-
-                        auto fb = style.FrameBorderSize;
-
-                        for (auto &[k, v]: vec) {
-                            if (k == state) {
-                                set_style_color(4.0f / 7.0f, 0.9f, 0.9f);
-
-                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
-                                ImGui::SetScrollHereY(0.5f); // 0.0f:top, 0.5f:center, 1.0f:bottom
-
-                                reset_style_color();
-
-                            } else {
-                                style.FrameBorderSize = 0.0f;
-                                set_style_color(5.0f, 0.1f, 0.1f);
-
-                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
-
-                                reset_style_color();
-                                style.FrameBorderSize = fb;
-                            }
-                        }
-
-                        style.FrameRounding = fr;
-                        style.GrabRounding = gr;
-                    }
-                    ImGui::EndChild();
-
-                    // centering.
-                    auto pp = ImGui::GetCursorScreenPos();
-                    pp.x = p.x;
-                    ImGui::SetCursorScreenPos(pp);
-                    if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down)) {
-                        itr++;
-                        if (itr == vec.end()) itr--;
-                        is_changed = true;
-                    }
-
-                    if (is_changed) {
-                        auto &[k, v] = *itr;
-                        imaging.ExposureShutterModeState = k;   // pre-set for GUI.
-                        cgi->set_imaging_ExposureShutterModeState(k);
-                        // auto [lap, lap_ave] = sw.lap();
-                        // std::cout << "LAP time(ms) = " << lap << " / " << lap_ave << std::endl;
-                    }
-
-                }
-                ImGui::EndChild();
-
-                ImGui::EndGroup();
-
-                ImGui::PopID();
-            }
+            show_panel_select_value_listbox(
+                "##EXPOSURE_SHUTTER_MODE_STATE",
+                state,
+                CGICmd::ExposureShutterModeState_OFF,
+                CGICmd::ExposureShutterModeState_AUTO,
+                exposure_shutter_mode_state, f,
+                0.5f, 0.1f
+            );
         }
 
         // shutter speed.
@@ -385,327 +416,58 @@ private:
         {
             auto &project = cgi->inquiry_project();
             auto frame_rate = project.RecFormatFrequency;
-            auto idx = imaging.ExposureExposureTime;
-            auto idx_min = imaging.ExposureExposureTimeRange.min;
-            auto idx_max = imaging.ExposureExposureTimeRange.max;
-            idx = std::clamp(idx, idx_min, idx_max);
-
-            std::string str = "---";
             auto &lst = (CGICmd::exposure_exposure_time.contains(frame_rate))
                 ? CGICmd::exposure_exposure_time[frame_rate]
                 : CGICmd::exposure_exposure_time_5994p
                 ;
-            auto itr = std::find_if(lst.begin(), lst.end(), [&idx](auto e){ return e.first == idx; });
-            if (itr != lst.end()) {
-                str = (*itr).second;
-            }
+            auto f = [&](int val) -> void { cgi->set_imaging_ExposureExposureTime(val); };
 
-            auto &vec = lst;
-            {
-                ImGui::PushID("##EXPOSURE_EXPOSURE_TIME");
-
-                ImGuiStyle& style = ImGui::GetStyle();
-
-                ImGui::BeginGroup();
-
-                float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 3;
-                float child_h = (ImGui::GetContentRegionAvail().y - 4 * style.ItemSpacing.y);
-                if (child_w < 1.0f) child_w = 1.0f;
-                if (child_h < 1.0f) child_h = 1.0f;
-                if (ImGui::BeginChild("CHILD", ImVec2(child_w, 200.0f), ImGuiChildFlags_None, ImGuiWindowFlags_None))
-                {
-                    ImVec2 p = ImGui::GetCursorScreenPos();
-                    ImVec2 win_size = ImGui::GetWindowSize();
-
-                    auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
-                    bool is_changed = false;
-
-                    // centering.
-                    p.x += (win_size.x / 2) - 20.0f;
-                    ImGui::SetCursorScreenPos(p);
-                    if (ImGui::ArrowButton("##UP", ImGuiDir_Up)) {
-                        if (itr != vec.begin()) itr--;
-                        is_changed = true;
-                    }
-
-                    if (ImGui::BeginChild("CHILD_CHILD", ImVec2(-1, 80.0f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
-                    {
-                        ImGuiStyle& style = ImGui::GetStyle();
-                        auto fr = style.FrameRounding;
-                        auto gr = style.GrabRounding;
-
-                        style.FrameRounding = 0.0f;
-                        style.GrabRounding = 0.0f;
-
-                        auto fb = style.FrameBorderSize;
-
-                        for (auto &[k, v]: vec) {
-                            if (k == idx) {
-                                set_style_color(4.0f / 7.0f, 0.9f, 0.9f);
-
-                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
-                                ImGui::SetScrollHereY(0.5f); // 0.0f:top, 0.5f:center, 1.0f:bottom
-
-                                reset_style_color();
-
-                            } else {
-                                style.FrameBorderSize = 0.0f;
-                                set_style_color(5.0f, 0.1f, 0.1f);
-
-                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
-
-                                reset_style_color();
-                                style.FrameBorderSize = fb;
-                            }
-                        }
-
-                        style.FrameRounding = fr;
-                        style.GrabRounding = gr;
-                    }
-                    ImGui::EndChild();
-
-                    // centering.
-                    auto pp = ImGui::GetCursorScreenPos();
-                    pp.x = p.x;
-                    ImGui::SetCursorScreenPos(pp);
-                    if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down)) {
-                        itr++;
-                        if (itr == vec.end()) itr--;
-                        is_changed = true;
-                    }
-
-                    if (is_changed) {
-                        auto &[k, v] = *itr;
-                        imaging.ExposureExposureTime = k;   // pre-set for GUI.
-                        cgi->set_imaging_ExposureExposureTime(k);
-                    }
-
-                }
-                ImGui::EndChild();
-
-                ImGui::EndGroup();
-
-                ImGui::PopID();
-            }
+            show_panel_select_value_listbox(
+                "##EXPOSURE_EXPOSURE_TIME",
+                imaging.ExposureExposureTime,
+                imaging.ExposureExposureTimeRange.min,
+                imaging.ExposureExposureTimeRange.max,
+                lst, f,
+                0.5f, 0.1f
+            );
         }
 
         // shutter angle.
         if (state == CGICmd::ExposureShutterModeState_ANGLE)
         {
-            auto idx = imaging.ExposureAngle;
-            auto idx_min = imaging.ExposureAngleRange.min;
-            auto idx_max = imaging.ExposureAngleRange.max;
-            idx = std::clamp(idx, idx_min, idx_max);
-
-            std::string str = "---";
             auto &lst = CGICmd::exposure_angle;
-            auto itr = std::find_if(lst.begin(), lst.end(), [&idx](auto e){ return e.first == idx; });
-            if (itr != lst.end()) {
-                str = (*itr).second;
-            }
+            auto f = [&](int val) -> void { cgi->set_imaging_ExposureAngle(val); };
 
-            auto &vec = lst;
-            {
-                ImGui::PushID("##EXPOSURE_ANGLE");
-
-                ImGuiStyle& style = ImGui::GetStyle();
-
-                ImGui::BeginGroup();
-
-                float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 3;
-                float child_h = (ImGui::GetContentRegionAvail().y - 4 * style.ItemSpacing.y);
-                if (child_w < 1.0f) child_w = 1.0f;
-                if (child_h < 1.0f) child_h = 1.0f;
-                if (ImGui::BeginChild("CHILD", ImVec2(child_w, 200.0f), ImGuiChildFlags_None, ImGuiWindowFlags_None))
-                {
-                    ImVec2 p = ImGui::GetCursorScreenPos();
-                    ImVec2 win_size = ImGui::GetWindowSize();
-
-                    auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
-                    bool is_changed = false;
-
-                    // centering.
-                    p.x += (win_size.x / 2) - 20.0f;
-                    ImGui::SetCursorScreenPos(p);
-                    if (ImGui::ArrowButton("##UP", ImGuiDir_Up)) {
-                        if (itr != vec.begin()) itr--;
-                        is_changed = true;
-                    }
-
-                    if (ImGui::BeginChild("CHILD_CHILD", ImVec2(-1, 80.0f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
-                    {
-                        ImGuiStyle& style = ImGui::GetStyle();
-                        auto fr = style.FrameRounding;
-                        auto gr = style.GrabRounding;
-
-                        style.FrameRounding = 0.0f;
-                        style.GrabRounding = 0.0f;
-
-                        auto fb = style.FrameBorderSize;
-
-                        for (auto &[k, v]: vec) {
-                            if (k == idx) {
-                                set_style_color(4.0f / 7.0f, 0.9f, 0.9f);
-
-                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
-                                ImGui::SetScrollHereY(0.5f); // 0.0f:top, 0.5f:center, 1.0f:bottom
-
-                                reset_style_color();
-
-                            } else {
-                                style.FrameBorderSize = 0.0f;
-                                set_style_color(5.0f, 0.1f, 0.1f);
-
-                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
-
-                                reset_style_color();
-                                style.FrameBorderSize = fb;
-                            }
-                        }
-
-                        style.FrameRounding = fr;
-                        style.GrabRounding = gr;
-                    }
-                    ImGui::EndChild();
-
-                    // centering.
-                    auto pp = ImGui::GetCursorScreenPos();
-                    pp.x = p.x;
-                    ImGui::SetCursorScreenPos(pp);
-                    if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down)) {
-                        itr++;
-                        if (itr == vec.end()) itr--;
-                        is_changed = true;
-                    }
-
-                    if (is_changed) {
-                        auto &[k, v] = *itr;
-                        imaging.ExposureAngle = k;   // pre-set for GUI.
-                        cgi->set_imaging_ExposureAngle(k);
-                    }
-
-                }
-                ImGui::EndChild();
-
-                ImGui::EndGroup();
-
-                ImGui::PopID();
-            }
+            show_panel_select_value_listbox(
+                "##EXPOSURE_ANGLE",
+                imaging.ExposureAngle,
+                imaging.ExposureAngleRange.min,
+                imaging.ExposureAngleRange.max,
+                lst, f,
+                0.5f, 0.1f
+            );
         }
 
         // shutter ECS.
         if (state == CGICmd::ExposureShutterModeState_ECS)
         {
-            auto idx = imaging.ExposureECS;
+            std::list<std::pair<int, std::string>> lst;
             auto idx_min = imaging.ExposureECSRange.min;
             auto idx_max = imaging.ExposureECSRange.max;
-            idx = std::clamp(idx, idx_min, idx_max);
-
-            std::list<std::pair<int, std::string>> lst;
             for (auto i = idx_min; i <= idx_max; i++) {
                 lst.emplace_back(std::pair<int, std::string>{ i, std::to_string(i) });
             }
 
-            auto &vec = lst;
-            {
-                ImGui::PushID("##EXPOSURE_ECS");
+            auto f = [&](int val) -> void { cgi->set_imaging_ExposureECS(val); };
 
-                ImGuiStyle& style = ImGui::GetStyle();
-
-                ImGui::BeginGroup();
-
-                float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 3;
-                float child_h = (ImGui::GetContentRegionAvail().y - 4 * style.ItemSpacing.y);
-                if (child_w < 1.0f) child_w = 1.0f;
-                if (child_h < 1.0f) child_h = 1.0f;
-                if (ImGui::BeginChild("CHILD", ImVec2(child_w, 200.0f), ImGuiChildFlags_None, ImGuiWindowFlags_None))
-                {
-                    ImVec2 p = ImGui::GetCursorScreenPos();
-                    ImVec2 win_size = ImGui::GetWindowSize();
-
-                    auto &io = ImGui::GetIO();
-                    auto key_delay_bkup = io.KeyRepeatDelay;
-                    auto key_rate_bkup = io.KeyRepeatRate;
-                    io.KeyRepeatDelay = 0.275f;
-                    io.KeyRepeatRate = 0.010f;
-
-                    auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
-                    bool is_changed = false;
-
-                    // centering.
-                    p.x += (win_size.x / 2) - 20.0f;
-                    ImGui::SetCursorScreenPos(p);
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##UP", ImGuiDir_Up) || ImGui::IsKeyPressed(ImGuiKey_E)) {
-                        if (itr != vec.begin()) itr--;
-                        is_changed = true;
-                    }
-                    ImGui::PopButtonRepeat();
-
-                    if (ImGui::BeginChild("CHILD_CHILD", ImVec2(-1, 80.0f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
-                    {
-                        ImGuiStyle& style = ImGui::GetStyle();
-                        auto fr = style.FrameRounding;
-                        auto gr = style.GrabRounding;
-
-                        style.FrameRounding = 0.0f;
-                        style.GrabRounding = 0.0f;
-
-                        auto fb = style.FrameBorderSize;
-
-                        for (auto &[k, v]: vec) {
-                            if (k == idx) {
-                                set_style_color(4.0f / 7.0f, 0.9f, 0.9f);
-
-                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
-                                ImGui::SetScrollHereY(0.5f); // 0.0f:top, 0.5f:center, 1.0f:bottom
-
-                                reset_style_color();
-
-                            } else {
-                                style.FrameBorderSize = 0.0f;
-                                set_style_color(5.0f, 0.1f, 0.1f);
-
-                                ImGui::Button(v.c_str(), ImVec2(-1, 0));
-
-                                reset_style_color();
-                                style.FrameBorderSize = fb;
-                            }
-                        }
-
-                        style.FrameRounding = fr;
-                        style.GrabRounding = gr;
-                    }
-                    ImGui::EndChild();
-
-                    // centering.
-                    auto pp = ImGui::GetCursorScreenPos();
-                    pp.x = p.x;
-                    ImGui::SetCursorScreenPos(pp);
-                    ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down) || ImGui::IsKeyPressed(ImGuiKey_C)) {
-                        itr++;
-                        if (itr == vec.end()) itr--;
-                        is_changed = true;
-                    }
-                    ImGui::PopButtonRepeat();
-
-                    io.KeyRepeatDelay = key_delay_bkup;
-                    io.KeyRepeatRate = key_rate_bkup;
-
-                    if (is_changed) {
-                        auto &[k, v] = *itr;
-                        imaging.ExposureECS = k;   // pre-set for GUI.
-                        cgi->set_imaging_ExposureECS(k);
-                    }
-
-                }
-                ImGui::EndChild();
-
-                ImGui::EndGroup();
-
-                ImGui::PopID();
-            }
+            show_panel_select_value_listbox(
+                "##EXPOSURE_ECS",
+                imaging.ExposureECS,
+                imaging.ExposureECSRange.min,
+                imaging.ExposureECSRange.max,
+                lst, f,
+                0.275f, 0.050f
+            );
         }
 
         // display shutter value.
