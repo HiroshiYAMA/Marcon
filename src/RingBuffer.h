@@ -52,7 +52,7 @@ private:
 
 public:
     RingBufferWithPool() = delete;
-    RingBufferWithPool(int count)
+    explicit RingBufferWithPool(int count)
     {
         max_size = count;
         idx = 0;
@@ -213,19 +213,18 @@ private:
     int max_size;
 
     std::queue<T> buffers;
+    bool keep_last_one;
+    bool overwrite_latest;
 
     std::mutex mtx;
 
-    uint64_t read_count;
-    uint64_t write_count;
-
 public:
     RingBufferAsync() = delete;
-    RingBufferAsync(int count)
+    explicit RingBufferAsync(int count, bool keep_last_one_ = true, bool overwrite_latest_ = true)
     {
         max_size = count;
-        read_count = 0;
-        write_count = 0;
+        keep_last_one = keep_last_one_;
+        overwrite_latest = overwrite_latest_;
     }
 
     virtual ~RingBufferAsync()
@@ -233,21 +232,9 @@ public:
         ;
     }
 
-    auto get_read_count() {
-        std::lock_guard<std::mutex> lg(mtx);
-        return read_count;
-    }
-
-    auto get_write_count() {
-        std::lock_guard<std::mutex> lg(mtx);
-        return write_count;
-    }
-
     T Read(bool latest = false)
     {
         std::lock_guard<std::mutex> lg(mtx);
-
-        read_count++;
 
 #ifndef NDEBUG
         std::cout << "[RingBufferAsync] queue size = " << buffers.size() << std::endl;
@@ -255,7 +242,7 @@ public:
 
         if (buffers.empty()) {
             return T{};
-        } else if (buffers.size() == 1) {
+        } else if (keep_last_one && buffers.size() == 1) {
             return buffers.front();
         }
 
@@ -288,12 +275,15 @@ public:
     {
         std::lock_guard<std::mutex> lg(mtx);
 
-        write_count++;
-
         if (buffers.size() < max_size) {
             buffers.push(val);
         } else {
-            buffers.back() = val;   // overwrite latest.
+            if (overwrite_latest) {
+                buffers.back() = val;   // overwrite latest.
+            } else {
+                buffers.pop();  // delete oldest.
+                buffers.push(val);
+            }
         }
     }
 };
