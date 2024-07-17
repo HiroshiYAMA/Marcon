@@ -636,7 +636,7 @@ private:
                     p.x += (win_size.x / 2) - 20.0f;
                     ImGui::SetCursorScreenPos(p);
                     ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##UP", ImGuiDir_Up)) {
+                    if (ImGui::ArrowButton("##UP", ImGuiDir_Up) || ImGui::IsKeyPressed(ImGuiKey_E)) {
                         if (itr != vec.begin()) itr--;
                         is_changed = true;
                     }
@@ -683,7 +683,7 @@ private:
                     pp.x = p.x;
                     ImGui::SetCursorScreenPos(pp);
                     ImGui::PushButtonRepeat(true);
-                    if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down)) {
+                    if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down) || ImGui::IsKeyPressed(ImGuiKey_C)) {
                         itr++;
                         if (itr == vec.end()) itr--;
                         is_changed = true;
