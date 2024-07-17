@@ -185,7 +185,8 @@ struct st_Imaging
     st_Range ExposureAngleRange;
 
     int ExposureECS;
-    int ExposureECSValue;   // 0.01 ECS.
+    st_Range ExposureECSRange;
+    int ExposureECSValue;   // 0.001 ECS.
 
     int ExposureExposureTime;
     st_Range ExposureExposureTimeRange;
@@ -395,6 +396,27 @@ public:
         default:
             return;
         }
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_ExposureExposureTime(int idx)
+    {
+        std::string msg;
+        msg = "ExposureExposureTime=" + std::to_string(idx);
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_ExposureAngle(int idx)
+    {
+        std::string msg;
+        msg = "ExposureAngle=" + std::to_string(idx);
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_ExposureECS(int idx)
+    {
+        std::string msg;
+        msg = "ExposureECS=" + std::to_string(idx);
         set_command<CGICmd::st_Imaging>(msg);
     }
 

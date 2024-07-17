@@ -75,6 +75,7 @@ inline auto conv_json_str2range = [](const njson& j, const char *key, CGICmd::st
 constexpr auto EXPOSURE_ANGLE = "ExposureAngle";
 constexpr auto EXPOSURE_ANGLE_RANGE = "ExposureAngleRange";
 constexpr auto EXPOSURE_ECS = "ExposureECS";
+constexpr auto EXPOSURE_ECS_RANGE = "ExposureECSRange";
 constexpr auto EXPOSURE_ECS_VALUE = "ExposureECSValue";
 constexpr auto EXPOSURE_EXPOSURE_TIME = "ExposureExposureTime";
 constexpr auto EXPOSURE_EXPOSURE_TIME_RANGE = "ExposureExposureTimeRange";
@@ -83,6 +84,7 @@ void to_json(njson& j, const CGICmd::st_Imaging& p) {
     j[EXPOSURE_ANGLE] = std::to_string(p.ExposureAngle);
     j[EXPOSURE_ANGLE_RANGE] = conv_range2str(p.ExposureAngleRange);
     j[EXPOSURE_ECS] = std::to_string(p.ExposureECS);
+    j[EXPOSURE_ECS_RANGE] = conv_range2str(p.ExposureECSRange);
     j[EXPOSURE_ECS_VALUE] = std::to_string(p.ExposureECSValue);
     j[EXPOSURE_EXPOSURE_TIME] = std::to_string(p.ExposureExposureTime);
     j[EXPOSURE_EXPOSURE_TIME_RANGE] = conv_range2str(p.ExposureExposureTimeRange);
@@ -92,6 +94,7 @@ void from_json(const njson& j, CGICmd::st_Imaging& p) {
     conv_json_str2num(j, EXPOSURE_ANGLE, p.ExposureAngle);
     conv_json_str2range(j, EXPOSURE_ANGLE_RANGE, p.ExposureAngleRange);
     conv_json_str2num(j, EXPOSURE_ECS, p.ExposureECS);
+    conv_json_str2range(j, EXPOSURE_ECS_RANGE, p.ExposureECSRange);
     conv_json_str2num(j, EXPOSURE_ECS_VALUE, p.ExposureECSValue);
     conv_json_str2num(j, EXPOSURE_EXPOSURE_TIME, p.ExposureExposureTime);
     conv_json_str2range(j, EXPOSURE_EXPOSURE_TIME_RANGE, p.ExposureExposureTimeRange);
