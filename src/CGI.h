@@ -495,6 +495,8 @@ public:
 
         while (running)
         {
+            std::tie(lap_cur_inq, lap_ave_inq) = sw_inq.lap();
+
             st_CmdInfo cmdi = {};
 
             try
@@ -524,8 +526,6 @@ public:
                 is_send_set_cmd.store(false);
             }
 
-            std::tie(lap_cur_inq, lap_ave_inq) = sw_inq.lap();
-
             tt.wait1period(1.0 / 60.0f);
         }
     }
@@ -534,6 +534,8 @@ public:
     {
         while (running)
         {
+            std::tie(lap_cur_set, lap_ave_set) = sw_set.lap();
+
             const auto wait_time = std::chrono::microseconds(16667);
             std::unique_lock<std::mutex> lk(mtx_cmd_msg);
             auto ret = cv_cmd_msg.wait_for(lk, wait_time, [&]{ return is_update_cmd_msg_list.load(); });
@@ -558,8 +560,6 @@ public:
                     std::cerr << e.what() << '\n';
                 }
             }
-
-            std::tie(lap_cur_set, lap_ave_set) = sw_set.lap();
         }
     }
 };
