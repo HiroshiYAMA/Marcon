@@ -234,19 +234,24 @@ private:
         CGICmd::st_Project project;
     };
 
-    // std::mutex mtx;
+    std::mutex mtx;
     std::mutex mtx_auth;
 
     bool running;
 
-    StopWatch sw;
-    double lap_cur;
-    double lap_ave;
+    StopWatch sw_inq, sw_set;
+    double lap_cur_inq, lap_cur_set;
+    double lap_ave_inq, lap_ave_set;
 
     st_CmdInfo cmd_info;
     std::unique_ptr<RingBufferAsync<st_CmdInfo>> cmd_info_list;
+    std::atomic_bool is_update_cmd_info_list;
 
-    uint64_t ring_buf_write_count;
+    std::unique_ptr<RingBufferAsync<std::string>> cmd_msg_list;
+    std::mutex mtx_cmd_msg;
+    std::condition_variable cv_cmd_msg;
+    std::atomic_bool is_update_cmd_msg_list;
+    std::atomic_bool is_send_set_cmd;
 
     std::string make_referer_message(const std::string &server_adr, int server_port)
     {
@@ -275,13 +280,20 @@ public:
 
         running = true;
 
-        lap_cur = 1.0;
-        lap_ave = 1.0;
+        lap_cur_inq = 1.0;
+        lap_ave_inq = 1.0;
+        lap_cur_set = 1.0;
+        lap_ave_set = 1.0;
 
         constexpr auto RING_BUF_SZ = 1;
         cmd_info = {};
         cmd_info_list = std::make_unique<RingBufferAsync<st_CmdInfo>>(RING_BUF_SZ);
-        ring_buf_write_count = static_cast<uint64_t>(-1);
+        is_update_cmd_info_list.store(false);
+
+        constexpr auto CMD_MSG_BUF_SZ = 4;
+        cmd_msg_list = std::make_unique<RingBufferAsync<std::string>>(CMD_MSG_BUF_SZ, false, false);
+        is_update_cmd_msg_list.store(false);
+        is_send_set_cmd.store(false);
     }
 
     virtual ~CGI() {}
@@ -292,7 +304,8 @@ public:
 
     bool is_auth() const { return auth; }
 
-    std::tuple<double, double> get_lap() { return { lap_cur, lap_ave }; }
+    std::tuple<double, double> get_lap_inq() { return { lap_cur_inq, lap_ave_inq }; }
+    std::tuple<double, double> get_lap_set() { return { lap_cur_set, lap_ave_set }; }
 
     // auto &get_cmd_info() { return cmd_info; }
     // auto &get_cmd_info() const { return cmd_info; }
@@ -337,7 +350,10 @@ public:
         std::stringstream ss;
         ss << "/command/" << T::cmd << ".cgi?" << param << "=" << val;
         std::string msg = ss.str();
-        auto [s, r] = GET(msg);
+
+        cmd_msg_list->Write(msg);
+        is_update_cmd_msg_list.store(true);
+        cv_cmd_msg.notify_one();
     }
 
     template<typename T> void set_command(const std::string &param_list)
@@ -345,7 +361,10 @@ public:
         std::stringstream ss;
         ss << "/command/" << T::cmd << ".cgi?" << param_list;
         std::string msg = ss.str();
-        auto [s, r] = GET(msg);
+
+        cmd_msg_list->Write(msg);
+        is_update_cmd_msg_list.store(true);
+        cv_cmd_msg.notify_one();
     }
 
     // Auto:  /command/imaging.cgi?ExposureAutoShutterEnable=on
@@ -426,29 +445,29 @@ public:
     auto &inquiry_imaging() { return cmd_info.imaging; }
     auto &inquiry_project() { return cmd_info.project; }
 
-    bool is_update_cmd_info() {
-        auto val = cmd_info_list->get_write_count();
-        auto ret = (val != ring_buf_write_count);
-        if (ret) ring_buf_write_count = val;
+    bool is_update_cmd_info()
+    {
+        auto ret = is_update_cmd_info_list.load();
+        if (ret) is_update_cmd_info_list.store(false);
 
         return ret;
     }
 
     void fetch(bool latest = false)
     {
-        // std::lock_guard<std::mutex> lg(mtx);
+        std::lock_guard<std::mutex> lg(mtx);
 
         cmd_info = latest ? cmd_info_list->PeekLatest() : cmd_info_list->Peek();
     }
 
     void next(bool latest = false)
     {
-        // std::lock_guard<std::mutex> lg(mtx);
+        std::lock_guard<std::mutex> lg(mtx);
 
         latest ? cmd_info_list->ReadLatest() : cmd_info_list->Read();
     }
 
-    void run()
+    void run_inq()
     {
         TinyTimer tt;
 
@@ -474,14 +493,51 @@ public:
                 std::cerr << e.what() << '\n';
             }
 
+            if (!is_send_set_cmd.load())
             {
-                // std::lock_guard<std::mutex> lg(mtx);
+                std::lock_guard<std::mutex> lg(mtx);
                 cmd_info_list->Write(cmdi);
+                is_update_cmd_info_list.store(true);
+            } else {
+                is_send_set_cmd.store(false);
             }
 
-            std::tie(lap_cur, lap_ave) = sw.lap();
+            std::tie(lap_cur_inq, lap_ave_inq) = sw_inq.lap();
 
-            tt.wait1period(1.0 / 10.0f);
+            tt.wait1period(1.0 / 60.0f);
+        }
+    }
+
+    void run_set()
+    {
+        while (running)
+        {
+            const auto wait_time = std::chrono::microseconds(16667);
+            std::unique_lock<std::mutex> lk(mtx_cmd_msg);
+            auto ret = cv_cmd_msg.wait_for(lk, wait_time, [&]{ return is_update_cmd_msg_list.load(); });
+            if (!ret) continue;
+
+            is_update_cmd_msg_list.store(false);
+            auto msg = cmd_msg_list->Read();
+            if (!msg.empty()) {
+                try
+                {
+                    is_send_set_cmd.store(true);
+                    auto [s, r] = GET(msg);
+                }
+                catch(const httplib::StatusCode &s)
+                {
+                    if (s == httplib::StatusCode::Unauthorized_401) {
+                        auth = false;
+                    }
+                }
+                catch(const std::exception& e)
+                {
+                    std::cerr << e.what() << '\n';
+                }
+            }
+
+            std::tie(lap_cur_set, lap_ave_set) = sw_set.lap();
         }
     }
 };

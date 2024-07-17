@@ -64,7 +64,7 @@ private:
 
     std::unique_ptr<CGI> cgi;
     std::thread thd_cgi;
-    std::unique_ptr<CGI> cgi_set;
+    std::thread thd_cgi_set;
 
     StopWatch sw;
 
@@ -181,11 +181,11 @@ private:
         }
 
         {
-            auto [lap_cur, lap_ave] = cgi->get_lap();
-            ImGui::Text("CGI %.2f(ms) / %.2f(fps)", lap_ave, 1'000.0 / lap_ave);
+            auto [lap_cur, lap_ave] = cgi->get_lap_inq();
+            ImGui::Text("CGI(inq) %.2f(ms) / %.2f(fps)", lap_ave, 1'000.0 / lap_ave);
         }
         {
-            auto [lap_cur, lap_ave] = cgi_set->get_lap();
+            auto [lap_cur, lap_ave] = cgi->get_lap_set();
             ImGui::Text("CGI(set) %.2f(ms) / %.2f(fps)", lap_ave, 1'000.0 / lap_ave);
         }
 
@@ -366,7 +366,7 @@ private:
                     if (is_changed) {
                         auto &[k, v] = *itr;
                         imaging.ExposureShutterModeState = k;   // pre-set for GUI.
-                        cgi_set->set_imaging_ExposureShutterModeState(k);
+                        cgi->set_imaging_ExposureShutterModeState(k);
                         // auto [lap, lap_ave] = sw.lap();
                         // std::cout << "LAP time(ms) = " << lap << " / " << lap_ave << std::endl;
                     }
@@ -722,7 +722,6 @@ public:
 
             if (ImGui::Button("Login")) {
                 cgi->set_account(remote_server.username, remote_server.password);
-                cgi_set->set_account(remote_server.username, remote_server.password);
                 camera_connection_stat.store(em_Camera_Connection_State::CONNECTED);
             }
         }
@@ -747,7 +746,7 @@ public:
         case em_Camera_Connection_State::CONNECTED:
             // check_auth();
             {
-                if (!cgi->is_auth() || !cgi_set->is_auth()) {
+                if (!cgi->is_auth()) {
                     camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
                     break;
                 }
@@ -757,12 +756,7 @@ public:
             {
                 auto is_update = cgi->is_update_cmd_info();
 
-                if (is_update) {
-                    cgi->fetch();
-                    // std::cout << "updated cmd_info. ===================================" << std::endl;
-                } else {
-                    // std::cout << "no updated cmd_info." << std::endl;
-                }
+                if (is_update) cgi->fetch();
 
                 is_window_opened = display_camera_window(win_id);
 
@@ -791,6 +785,8 @@ public:
         if (is_CONNECTED()) return false;
 
         bool ret = false;
+        bool ret_inq = false;
+        bool ret_set = false;
 
         if (!thd_proc_live_view.joinable()) {
             proc_live_view.reset(new ProcLiveView(remote_server, tex_width, tex_height));
@@ -804,17 +800,24 @@ public:
         if (!thd_cgi.joinable()) {
             cgi = std::make_unique<CGI>(remote_server.ip_address, stoi(remote_server.port), remote_server.username, remote_server.password);
             if (cgi && cgi->is_running()) {
-                std::thread thd_tmp{ [&]{ cgi->run(); }};
+                std::thread thd_tmp{ [&]{ cgi->run_inq(); }};
                 thd_cgi = std::move(thd_tmp);
-                ret = true;
+                ret_inq = true;
             } else {
-                ret = false;
+                ret_inq = false;
             }
         }
-        cgi_set = std::make_unique<CGI>(remote_server.ip_address, stoi(remote_server.port), remote_server.username, remote_server.password);
-        if (!cgi_set) ret = false;
+        if (!thd_cgi_set.joinable()) {
+            if (cgi && cgi->is_running()) {
+                std::thread thd_tmp{ [&]{ cgi->run_set(); }};
+                thd_cgi_set = std::move(thd_tmp);
+                ret_set = true;
+            } else {
+                ret_set = false;
+            }
+        }
 
-        return ret;
+        return ret && ret_inq && ret_set;
     }
 
     bool DISCONNECT()
@@ -827,6 +830,7 @@ public:
         if (cgi) {
             if (cgi->is_running()) cgi->stop();
             if (thd_cgi.joinable()) thd_cgi.join();
+            if (thd_cgi_set.joinable()) thd_cgi_set.join();
         }
 
         return true;
