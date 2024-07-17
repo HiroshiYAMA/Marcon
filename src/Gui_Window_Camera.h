@@ -81,7 +81,7 @@ private:
     bool is_display_image;
 
     std::unique_ptr<CGI> cgi;
-    std::thread thd_cgi;
+    std::thread thd_cgi_inq;
     std::thread thd_cgi_set;
 
     StopWatch sw;
@@ -887,11 +887,11 @@ public:
             }
         }
 
-        if (!thd_cgi.joinable()) {
+        if (!thd_cgi_inq.joinable()) {
             cgi = std::make_unique<CGI>(remote_server.ip_address, stoi(remote_server.port), remote_server.username, remote_server.password);
             if (cgi && cgi->is_running()) {
                 std::thread thd_tmp{ [&]{ cgi->run_inq(); }};
-                thd_cgi = std::move(thd_tmp);
+                thd_cgi_inq = std::move(thd_tmp);
                 ret_inq = true;
             } else {
                 ret_inq = false;
@@ -919,7 +919,7 @@ public:
 
         if (cgi) {
             if (cgi->is_running()) cgi->stop();
-            if (thd_cgi.joinable()) thd_cgi.join();
+            if (thd_cgi_inq.joinable()) thd_cgi_inq.join();
             if (thd_cgi_set.joinable()) thd_cgi_set.join();
         }
 
