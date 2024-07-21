@@ -420,30 +420,26 @@ void show_panel_texture_simple(const GLuint tex_id, GLsizei width, GLsizei heigh
 {
     window_flags |= ImGuiWindowFlags_NoCollapse;
 
-    if (ImGui::BeginChild(title.c_str(), ImVec2(width, height), false, window_flags)) {
-        // テクスチャを表示.
-        const auto uv_a = v_flip_flag ? ImVec2(0, 0) : ImVec2(0, 1);
-        const auto uv_b = v_flip_flag ? ImVec2(1, 1) : ImVec2(1, 0);
-        ImGui::Image(reinterpret_cast<ImTextureID>(tex_id), ImVec2(width, height), uv_a, uv_b);
+    // テクスチャを表示.
+    const auto uv_a = v_flip_flag ? ImVec2(0, 0) : ImVec2(0, 1);
+    const auto uv_b = v_flip_flag ? ImVec2(1, 1) : ImVec2(1, 0);
+    ImGui::Image(reinterpret_cast<ImTextureID>(tex_id), ImVec2(width, height), uv_a, uv_b);
 
-        // display information.
-        {
-            ImGuiStyle& style = ImGui::GetStyle();
-            auto fr = style.FrameRounding;
-            auto gr = style.GrabRounding;
+    // display information.
+    {
+        ImGuiStyle& style = ImGui::GetStyle();
+        auto fr = style.FrameRounding;
+        auto gr = style.GrabRounding;
 
-            style.FrameRounding = 0.0f;
-            style.GrabRounding = 0.0f;
-            for (auto &e : info_str) {
-                ImGui::Button(e.c_str());
-            }
-
-            style.FrameRounding = fr;
-            style.GrabRounding = gr;
+        style.FrameRounding = 0.0f;
+        style.GrabRounding = 0.0f;
+        for (auto &e : info_str) {
+            ImGui::Button(e.c_str());
         }
 
+        style.FrameRounding = fr;
+        style.GrabRounding = gr;
     }
-    ImGui::EndChild();
 }
 
 void show_panel_texture(const GLuint tex_id, GLsizei width, GLsizei height, std::string title,
