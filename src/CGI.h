@@ -181,6 +181,8 @@ struct st_Imaging
 {
     static constexpr auto cmd = "imaging";
 
+    /////////////////////////////////////////////////////////////////
+    // shutter.
     int ExposureAngle;
     st_Range ExposureAngleRange;
 
@@ -192,6 +194,9 @@ struct st_Imaging
     st_Range ExposureExposureTimeRange;
 
     em_ExposureShutterModeState ExposureShutterModeState;
+
+    /////////////////////////////////////////////////////////////////
+    // white balance.
 };
 
 /////////////////////////////////////////////////////////////////////

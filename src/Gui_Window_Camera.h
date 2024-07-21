@@ -481,14 +481,23 @@ private:
 
 
     /////////////////////////////////////////////////////////////////
-    // F number control.
+    // IRIS control.
     /////////////////////////////////////////////////////////////////
-    void show_panel_f_number_control()
+    void show_panel_iris_control()
     {
-        ImGui::PushID("F_Number_Control");
+        ImGui::PushID("IRIS_Control");
 
-        if (ImGui::Button("F#")) {
+        if (ImGui::Button("IRIS")) {
             ;
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            stat_main = em_State::MAIN;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
+            ;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
         }
 
         ImGui::PopID();
@@ -497,14 +506,23 @@ private:
 
 
     /////////////////////////////////////////////////////////////////
-    // iso sensitivity control.
+    // ISO control.
     /////////////////////////////////////////////////////////////////
-    void show_panel_iso_sensitivity_control()
+    void show_panel_iso_control()
     {
-        ImGui::PushID("ISO_Sensitivity_Control");
+        ImGui::PushID("ISO_Control");
 
         if (ImGui::Button("ISO")) {
             ;
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            stat_main = em_State::MAIN;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
+            ;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
         }
 
         ImGui::PopID();
@@ -822,6 +840,65 @@ private:
             ;
         }
 
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            stat_main = em_State::MAIN;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
+            ;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+
+        ImGui::PopID();
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // ND control.
+    /////////////////////////////////////////////////////////////////
+    void show_panel_nd_control()
+    {
+        ImGui::PushID("ND_Control");
+
+        if (ImGui::Button("ND")) {
+            ;
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            stat_main = em_State::MAIN;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
+            ;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+
+        ImGui::PopID();
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // FPS control.
+    /////////////////////////////////////////////////////////////////
+    void show_panel_fps_control()
+    {
+        ImGui::PushID("FPS_Control");
+
+        if (ImGui::Button("FPS")) {
+            ;
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            stat_main = em_State::MAIN;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
+            ;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+
         ImGui::PopID();
     }
 
@@ -1033,14 +1110,19 @@ public:
                 show_panel_shutter_control();
                 break;
             case em_State::WHITE_BALANCE:
+                show_panel_white_balance_control();
                 break;
             case em_State::ISO:
+                show_panel_iso_control();
                 break;
             case em_State::IRIS:
+                show_panel_iris_control();
                 break;
             case em_State::ND:
+                show_panel_nd_control();
                 break;
             case em_State::FPS:
+                show_panel_fps_control();
                 break;
             default:
                 ;
