@@ -888,6 +888,10 @@ public:
                     ImGui::Separator();
 
                     show_panel_main();
+
+                    if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                        is_window_opened = false;
+                    }
                 }
                 break;
             case em_State::SHUTTER:
@@ -907,20 +911,9 @@ public:
                 ;
             }
 
-            // show_panel_shutter_control();
-            // show_panel_white_balance_control();
-            // show_panel_iso_sensitivity_control();
-            // show_panel_f_number_control();
-            // // ND.
-            // // FPS.
-
-            // // PTZ
-            // // focus.
-            // // Stream setting.
-
-            // if (ImGui::Button("Live View")) {
-            //     is_display_image = true;                
-            // }
+            // PTZ
+            // focus.
+            // Stream setting.
         }
         ImGui::End();
 

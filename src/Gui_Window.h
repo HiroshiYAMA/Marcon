@@ -49,6 +49,11 @@
 
 class Gui_Window
 {
+    enum class em_State {
+        LANCHER,
+        CAMERA_CONTROL,
+    };
+
     struct st_RemoteServerInfo
     {
         std::unique_ptr<Gui_Window_Camera> handle = nullptr;
@@ -70,6 +75,8 @@ private:
     bool is_loop;
 
     TinyTimer tt;
+
+    em_State state;
 
     bool show_demo_window;
 
@@ -127,6 +134,7 @@ private:
                 if (!gui_win_camera) {
                     ;   // make unique ptr of Gui_Window_Camera.
                     gui_win_camera = std::make_unique<Gui_Window_Camera>(win_w, win_h, v.remote_server);
+                    state = em_State::CAMERA_CONTROL;
                 }
             }
             ImGui::SameLine();
@@ -290,6 +298,8 @@ public:
 
         tt = {};
 
+        state = em_State::LANCHER;
+
         show_demo_window = false;
 
         // このインスタンスの this ポインタを記録しておく
@@ -360,18 +370,22 @@ public:
             if (show_demo_window)
                 ImGui::ShowDemoWindow(&show_demo_window);
 
-            // display launcher window.
-            display_launcher_window();
+            if (state == em_State::LANCHER) {
+                // display launcher window.
+                display_launcher_window();
 
-            // display control window.
-            for (auto &[k, v] : remote_server_info_DB) {
-                auto &gui_win_camera = v.handle;
-                const auto &id = k;
-                if (gui_win_camera) {
-                    auto ret = gui_win_camera->display_control_window(id);
-                    if (!ret) {
-                        gui_win_camera->DISCONNECT();
-                        gui_win_camera.reset();
+            } else if (state == em_State::CAMERA_CONTROL) {
+                // display control window.
+                for (auto &[k, v] : remote_server_info_DB) {
+                    auto &gui_win_camera = v.handle;
+                    const auto &id = k;
+                    if (gui_win_camera) {
+                        auto ret = gui_win_camera->display_control_window(id);
+                        if (!ret) {
+                            gui_win_camera->DISCONNECT();
+                            gui_win_camera.reset();
+                            state = em_State::LANCHER;
+                        }
                     }
                 }
             }
