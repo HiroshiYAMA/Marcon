@@ -61,8 +61,41 @@ enum class em_Camera_Connection_State : int {
 
 class Gui_Window_Camera
 {
+public:
+    enum class em_State {
+        MAIN,
+        SHUTTER,
+        WHITE_BALANCE,
+        ISO,
+        IRIS,
+        ND,
+        FPS,
+
+        PTZ,
+        FOCUS,
+        STREAMING,
+
+        LIVE_VIEW,
+    };
+
+    enum class em_StateShutter {
+        MODE,
+        CONTROL,
+    };
+
+    enum class em_StateWhiteBalance {};
+    enum class em_StateISO {};
+    enum class em_StateIRIS {};
+    enum class em_StateND {};
+    enum class em_StateFPS {};
+
 private:
     st_RemoteServer remote_server = {};
+
+    em_State stat_main = em_State::MAIN;
+    em_State stat_main_bkup = em_State::MAIN;
+    em_StateShutter stat_shutter = em_StateShutter::CONTROL;
+    CGICmd::em_ExposureShutterModeState shutter_mode_state_bkup = CGICmd::ExposureShutterModeState_AUTO;
 
     // cudaStream_t m_cuda_stream = NULL;
 
@@ -78,103 +111,13 @@ private:
     // thread.
     std::unique_ptr<ProcLiveView> proc_live_view;
     std::thread thd_proc_live_view;
-    bool is_display_image;
+    // bool is_display_image;
 
     std::unique_ptr<CGI> cgi;
     std::thread thd_cgi_inq;
     std::thread thd_cgi_set;
 
     StopWatch sw;
-
-    // template<typename F_get, typename F_set, typename F_get_list, typename F_format, typename F_format_release, typename T>
-    // void put_item_change_property(
-    //     F_get func_get,
-    //     F_set func_set,
-    //     F_get_list func_get_list,
-    //     F_format func_format,
-    //     F_format_release func_format_release,
-    //     T &val_list,
-    //     const char *name,
-    //     const char *item_id,
-    //     size_t str_len_max,
-    //     bool same_line = true
-    // )
-    // {
-    //     ImGui::BeginGroup();
-
-    //     auto val = func_get(camera_handle);
-    //     using vec_type = std::pair<decltype(val), std::string>;
-
-    //     auto num = func_get_list(camera_handle, &val_list);
-    //     std::vector<vec_type> vec;
-    //     make_list2vec_with_free(val_list, vec, func_format, func_format_release);
-
-    //     int idx = search_vec(vec, val);
-
-    //     // repair list.
-    //     repair_list_with_free(vec, idx, val, func_format, func_format_release);
-
-    //     std::vector<char> combo_vec;
-    //     make_combo_vec(vec, combo_vec, str_len_max);
-
-    //     ImGui::Text("%s", name);
-    //     if (same_line) ImGui::SameLine();
-    //     ImGui::PushItemWidth(str_len_max * vis_xscale);
-    //     ImGui::Combo(item_id, &idx, combo_vec.data());
-    //     ImGui::PopItemWidth();
-
-    //     if (idx >= 0 && idx < vec.size()) {
-    //         auto val_new = vec[idx].first;
-    //         if (val != val_new) func_set(camera_handle, val_new);
-    //     }
-
-    //     ImGui::EndGroup();
-    // }
-    // template<typename F_get, typename F_get_list, typename F_format, typename F_format_release, typename T>
-    // void set_metadata_camera_status_list(
-    //     F_get func_get,
-    //     F_get_list func_get_list,
-    //     F_format func_format,
-    //     F_format_release func_format_release,
-    //     T &val_list,
-    //     st_Metadata_CameraStatus_list &camera_status_list
-    // )
-    // {
-    //     auto str = func_format(func_get(camera_handle));
-    //     camera_status_list.value = str;
-    //     func_format_release(str);
-
-    //     auto num = func_get_list(camera_handle, &val_list);
-    //     auto &list = camera_status_list.list;
-    //     list.clear();
-    //     for (int i = 0; i < num; i++) {
-    //         auto str = func_format(val_list.list[i]);
-    //         list.push_back(str);
-    //         func_format_release(str);
-    //     }
-    // }
-    // template<typename F_get, typename F_get_list, typename F_format, typename F_format_release, typename T>
-    // void set_metadata_camera_status_range(
-    //     F_get func_get,
-    //     F_get_list func_get_list,
-    //     F_format func_format,
-    //     F_format_release func_format_release,
-    //     T &val_list,
-    //     st_Metadata_CameraStatus_range &camera_status_range
-    // )
-    // {
-    //     auto str = func_format(func_get(camera_handle));
-    //     camera_status_range.value = str;
-    //     func_format_release(str);
-
-    //     auto num = func_get_list(camera_handle, &val_list);
-    //     if (num == 3) {
-    //         auto &range = camera_status_range.range;
-    //         auto &vlist = val_list.list;
-    //         range = { vlist[0], vlist[1], vlist[2] };
-    //     }
-    // }
-    // static constexpr void dummy_func_format_release(const char *val) {}
 
     // print selected camera info.
     void show_panel_print_selected_camera_info()
@@ -233,6 +176,47 @@ private:
         ImGui::PopID();
     }
 
+    void show_panel_main()
+    {
+        ImGui::PushID("Main");
+
+        stat_main_bkup = stat_main;
+
+        if (ImGui::Button("FPS") || ImGui::IsKeyPressed(ImGuiKey_W, false)) {
+            stat_main = em_State::FPS;
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("ISO") || ImGui::IsKeyPressed(ImGuiKey_E, false)) {
+            stat_main = em_State::ISO;
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("Shutter") || ImGui::IsKeyPressed(ImGuiKey_R, false)) {
+            stat_main = em_State::SHUTTER;
+        }
+
+        if (ImGui::Button("ND") || ImGui::IsKeyPressed(ImGuiKey_X, false)) {
+            stat_main = em_State::ND;
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("IRIS") || ImGui::IsKeyPressed(ImGuiKey_C, false)) {
+            stat_main = em_State::IRIS;
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("WB") || ImGui::IsKeyPressed(ImGuiKey_V, false)) {
+            stat_main = em_State::WHITE_BALANCE;
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main = em_State::LIVE_VIEW;
+        }
+
+        ImGui::PopID();
+    }
+
     // focus control.
     void show_panel_focus_control()
     {
@@ -269,6 +253,7 @@ private:
         ImGui::PopID();
     }
 
+    // select value listbox.
     template<typename T, typename Tfunc=std::function<void(T)>> void show_panel_select_value_listbox(
         const char *id_str,
         T &idx, T idx_min, T idx_max,
@@ -287,11 +272,7 @@ private:
 
             ImGui::BeginGroup();
 
-            float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 3;
-            float child_h = (ImGui::GetContentRegionAvail().y - 4 * style.ItemSpacing.y);
-            if (child_w < 1.0f) child_w = 1.0f;
-            if (child_h < 1.0f) child_h = 1.0f;
-            if (ImGui::BeginChild("CHILD", ImVec2(child_w, 200.0f), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+            if (ImGui::BeginChild("CHILD", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
             {
                 ImVec2 p = ImGui::GetCursorScreenPos();
                 ImVec2 win_size = ImGui::GetWindowSize();
@@ -306,16 +287,22 @@ private:
                 bool is_changed = false;
 
                 // centering.
-                p.x += (win_size.x / 2) - 20.0f;
-                ImGui::SetCursorScreenPos(p);
+                constexpr auto ar_size = 17.0f * app_font_scale;
+                ImVec2 p_up(p.x + (win_size.x / 2) - (ar_size / 2), p.y + 4.0f);
+                ImGui::SetCursorScreenPos(p_up);
                 ImGui::PushButtonRepeat(true);
-                if (ImGui::ArrowButton("##UP", ImGuiDir_Up) || ImGui::IsKeyPressed(ImGuiKey_E)) {
+                if (ImGui::ArrowButton("##UP", ImGuiDir_Up)
+                    || ImGui::IsKeyPressed(ImGuiKey_E)
+                    || ImGui::IsKeyPressed(ImGuiKey_UpArrow)
+                ) {
                     if (itr != vec.begin()) itr--;
                     is_changed = true;
                 }
                 ImGui::PopButtonRepeat();
 
-                if (ImGui::BeginChild("CHILD_CHILD", ImVec2(-1, 140.0f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
+                ImVec2 p_list(p.x, p.y + (win_size.y * (1.0f - 0.5f) / 2));
+                ImGui::SetCursorScreenPos(p_list);
+                if (ImGui::BeginChild("CHILD_CHILD", ImVec2(-1, win_size.y * 0.5f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
                 {
                     ImGuiStyle& style = ImGui::GetStyle();
                     auto fr = style.FrameRounding;
@@ -352,11 +339,13 @@ private:
                 ImGui::EndChild();
 
                 // centering.
-                auto pp = ImGui::GetCursorScreenPos();
-                pp.x = p.x;
-                ImGui::SetCursorScreenPos(pp);
+                ImVec2 p_down(p_up.x, win_size.y - ar_size + (12.0f - 4.0f));
+                ImGui::SetCursorScreenPos(p_down);
                 ImGui::PushButtonRepeat(true);
-                if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down) || ImGui::IsKeyPressed(ImGuiKey_C)) {
+                if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down)
+                    || ImGui::IsKeyPressed(ImGuiKey_C)
+                    || ImGui::IsKeyPressed(ImGuiKey_DownArrow)
+                ) {
                     itr++;
                     if (itr == vec.end()) itr--;
                     is_changed = true;
@@ -381,6 +370,256 @@ private:
         }
     }
 
+    // shutter value.
+    void show_panel_shutter_value()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &state = imaging.ExposureShutterModeState;
+
+        switch (state) {
+        case CGICmd::ExposureShutterModeState_SPEED:
+        case CGICmd::ExposureShutterModeState_AUTO:
+            {
+                auto &project = cgi->inquiry_project();
+                auto frame_rate = project.RecFormatFrequency;
+                auto idx = imaging.ExposureExposureTime;
+                auto idx_min = imaging.ExposureExposureTimeRange.min;
+                auto idx_max = imaging.ExposureExposureTimeRange.max;
+
+                std::string str = "---";
+                if (CGICmd::exposure_exposure_time.contains(frame_rate)) {
+                    auto &lst = CGICmd::exposure_exposure_time[frame_rate];
+                    using e_type = decltype(lst.front());
+                    auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
+                    if (itr != lst.end()) {
+                        str = (*itr).second;
+                    }
+                }
+                ImGui::Text("%s", str.c_str());
+            }
+            break;
+
+        case CGICmd::ExposureShutterModeState_ANGLE:
+            {
+                auto idx = imaging.ExposureAngle;
+                auto idx_min = imaging.ExposureAngleRange.min;
+                auto idx_max = imaging.ExposureAngleRange.max;
+
+                std::string str = "---";
+                auto &lst = CGICmd::exposure_angle;
+                using e_type = decltype(lst.front());
+                auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
+                if (itr != lst.end()) {
+                    str = (*itr).second;
+                }
+                ImGui::Text("%s", str.c_str());
+            }
+            break;
+
+        case CGICmd::ExposureShutterModeState_ECS:
+            {
+                auto idx = imaging.ExposureECS;
+                auto val = imaging.ExposureECSValue;
+                auto val_f = val / 1000.0f;
+                ImGui::Text("[%d] %.2f", idx, val_f);
+            }
+            break;
+
+        case CGICmd::ExposureShutterModeState_OFF:
+        default:
+            ;
+        }
+    }
+
+    void show_panel_shutter_mode()
+    {
+        ImGui::PushID("SHUTTER_MODE");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto &state = imaging.ExposureShutterModeState;
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("shutter_mode", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                {
+                    static const std::list<std::pair<CGICmd::em_ExposureShutterModeState, std::string>> exposure_shutter_mode_state = {
+                        {CGICmd::ExposureShutterModeState_AUTO, "Auto"},
+                        {CGICmd::ExposureShutterModeState_SPEED, "Speed"},
+                        {CGICmd::ExposureShutterModeState_ANGLE, "Angle"},
+                        {CGICmd::ExposureShutterModeState_ECS, "ECS"},
+                        {CGICmd::ExposureShutterModeState_OFF, "Off"},
+                    };
+
+                    auto f = [&](CGICmd::em_ExposureShutterModeState val) -> void { cgi->set_imaging_ExposureShutterModeState(val); };
+
+                    show_panel_select_value_listbox(
+                        "##EXPOSURE_SHUTTER_MODE_STATE",
+                        state,
+                        CGICmd::ExposureShutterModeState_OFF,
+                        CGICmd::ExposureShutterModeState_AUTO,
+                        exposure_shutter_mode_state, f,
+                        0.5f, 0.1f
+                    );
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            if (state == CGICmd::ExposureShutterModeState_AUTO || state == CGICmd::ExposureShutterModeState_OFF) {
+                stat_main = em_State::MAIN;
+            } else {
+                stat_shutter = em_StateShutter::CONTROL;
+            }
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_shutter_speed()
+    {
+        ImGui::PushID("SHUTTER_SPEED");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto &state = imaging.ExposureShutterModeState;
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("shutter_speed", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                {
+                    auto &project = cgi->inquiry_project();
+                    auto frame_rate = project.RecFormatFrequency;
+                    auto &lst = (CGICmd::exposure_exposure_time.contains(frame_rate))
+                        ? CGICmd::exposure_exposure_time[frame_rate]
+                        : CGICmd::exposure_exposure_time_5994p
+                        ;
+                    auto f = [&](int val) -> void { cgi->set_imaging_ExposureExposureTime(val); };
+
+                    show_panel_select_value_listbox(
+                        "##EXPOSURE_EXPOSURE_TIME",
+                        imaging.ExposureExposureTime,
+                        imaging.ExposureExposureTimeRange.min,
+                        imaging.ExposureExposureTimeRange.max,
+                        lst, f,
+                        0.5f, 0.1f
+                    );
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_shutter_angle()
+    {
+        ImGui::PushID("SHUTTER_ANGLE");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto &state = imaging.ExposureShutterModeState;
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("shutter_angle", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                {
+                    auto &lst = CGICmd::exposure_angle;
+                    auto f = [&](int val) -> void { cgi->set_imaging_ExposureAngle(val); };
+
+                    show_panel_select_value_listbox(
+                        "##EXPOSURE_ANGLE",
+                        imaging.ExposureAngle,
+                        imaging.ExposureAngleRange.min,
+                        imaging.ExposureAngleRange.max,
+                        lst, f,
+                        0.5f, 0.1f
+                    );
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_shutter_ecs()
+    {
+        ImGui::PushID("SHUTTER_ECS");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto &state = imaging.ExposureShutterModeState;
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("shutter_ecs", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                {
+                    std::list<std::pair<int, std::string>> lst;
+                    auto idx_min = imaging.ExposureECSRange.min;
+                    auto idx_max = imaging.ExposureECSRange.max;
+                    for (auto i = idx_min; i <= idx_max; i++) {
+                        lst.emplace_back(std::pair<int, std::string>{ i, std::to_string(i) });
+                    }
+
+                    auto f = [&](int val) -> void { cgi->set_imaging_ExposureECS(val); };
+
+                    show_panel_select_value_listbox(
+                        "##EXPOSURE_ECS",
+                        imaging.ExposureECS,
+                        imaging.ExposureECSRange.min,
+                        imaging.ExposureECSRange.max,
+                        lst, f,
+                        0.275f, 0.050f
+                    );
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::PopID();
+    }
+
     // shutter control.
     void show_panel_shutter_control()
     {
@@ -389,146 +628,47 @@ private:
         auto &imaging = cgi->inquiry_imaging();
         auto &state = imaging.ExposureShutterModeState;
 
-        // select shutter mode.
-        {
-            static const std::list<std::pair<CGICmd::em_ExposureShutterModeState, std::string>> exposure_shutter_mode_state = {
-                {CGICmd::ExposureShutterModeState_AUTO, "Auto"},
-                {CGICmd::ExposureShutterModeState_SPEED, "Speed"},
-                {CGICmd::ExposureShutterModeState_ANGLE, "Angle"},
-                {CGICmd::ExposureShutterModeState_ECS, "ECS"},
-                {CGICmd::ExposureShutterModeState_OFF, "Off"},
-            };
+        shutter_mode_state_bkup = state;
 
-            auto f = [&](CGICmd::em_ExposureShutterModeState val) -> void { cgi->set_imaging_ExposureShutterModeState(val); };
+        if (stat_shutter == em_StateShutter::MODE) {
+            show_panel_shutter_mode();
 
-            show_panel_select_value_listbox(
-                "##EXPOSURE_SHUTTER_MODE_STATE",
-                state,
-                CGICmd::ExposureShutterModeState_OFF,
-                CGICmd::ExposureShutterModeState_AUTO,
-                exposure_shutter_mode_state, f,
-                0.5f, 0.1f
-            );
-        }
-
-        // shutter speed.
-        if (state == CGICmd::ExposureShutterModeState_SPEED)
-        {
-            auto &project = cgi->inquiry_project();
-            auto frame_rate = project.RecFormatFrequency;
-            auto &lst = (CGICmd::exposure_exposure_time.contains(frame_rate))
-                ? CGICmd::exposure_exposure_time[frame_rate]
-                : CGICmd::exposure_exposure_time_5994p
-                ;
-            auto f = [&](int val) -> void { cgi->set_imaging_ExposureExposureTime(val); };
-
-            show_panel_select_value_listbox(
-                "##EXPOSURE_EXPOSURE_TIME",
-                imaging.ExposureExposureTime,
-                imaging.ExposureExposureTimeRange.min,
-                imaging.ExposureExposureTimeRange.max,
-                lst, f,
-                0.5f, 0.1f
-            );
-        }
-
-        // shutter angle.
-        if (state == CGICmd::ExposureShutterModeState_ANGLE)
-        {
-            auto &lst = CGICmd::exposure_angle;
-            auto f = [&](int val) -> void { cgi->set_imaging_ExposureAngle(val); };
-
-            show_panel_select_value_listbox(
-                "##EXPOSURE_ANGLE",
-                imaging.ExposureAngle,
-                imaging.ExposureAngleRange.min,
-                imaging.ExposureAngleRange.max,
-                lst, f,
-                0.5f, 0.1f
-            );
-        }
-
-        // shutter ECS.
-        if (state == CGICmd::ExposureShutterModeState_ECS)
-        {
-            std::list<std::pair<int, std::string>> lst;
-            auto idx_min = imaging.ExposureECSRange.min;
-            auto idx_max = imaging.ExposureECSRange.max;
-            for (auto i = idx_min; i <= idx_max; i++) {
-                lst.emplace_back(std::pair<int, std::string>{ i, std::to_string(i) });
-            }
-
-            auto f = [&](int val) -> void { cgi->set_imaging_ExposureECS(val); };
-
-            show_panel_select_value_listbox(
-                "##EXPOSURE_ECS",
-                imaging.ExposureECS,
-                imaging.ExposureECSRange.min,
-                imaging.ExposureECSRange.max,
-                lst, f,
-                0.275f, 0.050f
-            );
-        }
-
-        // display shutter value.
-        {
+        } else if (stat_shutter == em_StateShutter::CONTROL) {
             switch (state) {
             case CGICmd::ExposureShutterModeState_SPEED:
-            case CGICmd::ExposureShutterModeState_AUTO:
-                {
-                    auto &project = cgi->inquiry_project();
-                    auto frame_rate = project.RecFormatFrequency;
-                    auto idx = imaging.ExposureExposureTime;
-                    auto idx_min = imaging.ExposureExposureTimeRange.min;
-                    auto idx_max = imaging.ExposureExposureTimeRange.max;
-
-                    std::string str = "---";
-                    if (CGICmd::exposure_exposure_time.contains(frame_rate)) {
-                        auto &lst = CGICmd::exposure_exposure_time[frame_rate];
-                        using e_type = decltype(lst.front());
-                        auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
-                        if (itr != lst.end()) {
-                            str = (*itr).second;
-                        }
-                    }
-                    ImGui::Text("%s", str.c_str());
-                }
+                show_panel_shutter_speed();
                 break;
 
             case CGICmd::ExposureShutterModeState_ANGLE:
-                {
-                    auto idx = imaging.ExposureAngle;
-                    auto idx_min = imaging.ExposureAngleRange.min;
-                    auto idx_max = imaging.ExposureAngleRange.max;
-
-                    std::string str = "---";
-                    auto &lst = CGICmd::exposure_angle;
-                    using e_type = decltype(lst.front());
-                    auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
-                    if (itr != lst.end()) {
-                        str = (*itr).second;
-                    }
-                    ImGui::Text("%s", str.c_str());
-                }
+                show_panel_shutter_angle();
                 break;
 
             case CGICmd::ExposureShutterModeState_ECS:
-                {
-                    auto idx = imaging.ExposureECS;
-                    auto val = imaging.ExposureECSValue;
-                    auto val_f = val / 1000.0f;
-                    ImGui::Text("[%d] %.2f", idx, val_f);
-                }
+                show_panel_shutter_ecs();
+                break;
+
+            case CGICmd::ExposureShutterModeState_AUTO:
+                stat_shutter = em_StateShutter::MODE;
                 break;
 
             case CGICmd::ExposureShutterModeState_OFF:
-            default:
-                ;
-            }
-        }
+                stat_shutter = em_StateShutter::MODE;
+                break;
 
-        if (ImGui::Button("Shutter")) {
-            ;
+            default:
+                stat_main = em_State::MAIN;
+            }
+
+            // show_panel_shutter_value();
+
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+                stat_main = em_State::MAIN;
+            } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
+                stat_shutter = em_StateShutter::MODE;
+            } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+                stat_main_bkup = stat_main;
+                stat_main = em_State::LIVE_VIEW;
+            }
         }
 
         ImGui::PopID();
@@ -546,7 +686,7 @@ private:
         ImGui::PopID();
     }
 
-    bool show_panel_live_view()
+    void show_panel_live_view(GLsizei panel_width, bool display_info = true, bool texture_simple = false)
     {
         // if live view is OK?
         {
@@ -578,23 +718,44 @@ private:
         }
 
         auto aspect = GLfloat(tex_width) / GLfloat(tex_height);
-        GLsizei w = tex_width;
+        GLsizei w = panel_width;
         std::ostringstream sout_title;
         auto &rs = remote_server;
         std::string rs_str = rs.ip_address + ":" + rs.port + " / " + "[SRT]" + (rs.is_srt_listener ? "Listener" : "Caller") + ":" + rs.srt_port;
         sout_title << "Live View (" << rs_str << ")";
         std::string str_title = sout_title.str();
         std::vector<std::string> str_info;
-        {
+        if (display_info) {
             std::ostringstream sout_info;
             sout_info << rs_str;
             str_info.push_back(sout_info.str());
         }
-        // show_panel_texture(tex_id, w, GLsizei(w / aspect), str_title.c_str(), 0, true, str_info);
-        bool is_opend = true;
-        display_texture(tex_id, w, GLsizei(w / aspect), str_title.c_str(), &is_opend, 0, false, false, true, str_info);
 
-        return is_opend;
+        if (texture_simple) {
+            show_panel_texture_simple(tex_id, w, GLsizei(w / aspect), str_title.c_str(), 0, true, str_info);
+        } else {
+            show_panel_texture(tex_id, w, GLsizei(w / aspect), str_title.c_str(), 0, true, str_info);
+        }
+    }
+
+    void show_panel_live_view_with_info()
+    {
+        if (ImGui::BeginChild("CHILD", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+        {
+            ImVec2 p = ImGui::GetCursorScreenPos();
+            ImVec2 win_size = ImGui::GetWindowSize();
+
+            show_panel_live_view(win_size.x, false, true);
+
+            ImGui::SetWindowFontScale(0.75f);
+            auto &rs = remote_server;
+            std::string cgi_server = rs.ip_address + ":" + rs.port;
+            std::string srt = std::string{"[SRT]"} + (rs.is_srt_listener ? "Listener" : "Caller") + ":" + rs.srt_port;
+            ImGui::Text("Live View");
+            ImGui::Text("%s", cgi_server.c_str());
+            ImGui::Text("%s", srt.c_str());
+        }
+        ImGui::EndChild();
     }
 
     double calc_fps() const
@@ -661,7 +822,7 @@ public:
         std::tie(tex_internalFormat, tex_format) = get_format(tex_type, RGB_CH_NUM);
         tex_id = make_texture(0, GL_TEXTURE_2D, tex_width, tex_height, 0, tex_type, RGB_CH_NUM);
 
-        is_display_image = false;
+        // is_display_image = false;
 
         auto is_connected = CONNECT();
         camera_connection_stat.store(is_connected ? em_Camera_Connection_State::CONNECTED : em_Camera_Connection_State::DISCONNECTED);
@@ -685,61 +846,81 @@ public:
         colors[ImGuiCol_TitleBgActive] = ImVec4(0.32f, 0.32f, 0.63f, 0.87f);
         colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
 
-        static bool no_titlebar = false;
-        static bool no_resize = false;
-        static bool no_move = false;
-        static bool no_scrollbar = false;
-        static bool no_collapse = false;
-        static bool no_menu = true;
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav;
 
-        // Demonstrate the various window flags. Typically you would just use the default.
-        ImGuiWindowFlags window_flags = 0;
-        if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
-        if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
-        if (no_move)      window_flags |= ImGuiWindowFlags_NoMove;
-        if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
-        if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
-        if (!no_menu)     window_flags |= ImGuiWindowFlags_MenuBar;
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 win_pos(viewport->WorkPos.x * vis_xscale, viewport->WorkPos.y * vis_xscale);
+        ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
 
+#if 1
+        // ImGui::SetNextWindowPos(ImVec2(0 * vis_xscale, 0 * vis_xscale), ImGuiCond_Appearing);
+        // ImGui::SetNextWindowSize(ImVec2(800 * vis_xscale, 480 * vis_xscale), ImGuiCond_Appearing);
+        ImGui::SetNextWindowPos(win_pos, ImGuiCond_Appearing);
+        ImGui::SetNextWindowSize(win_size, ImGuiCond_Appearing);
+#else
         // Always center this window when appearing
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
         ImGui::SetNextWindowPos(center, ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(800 * vis_xscale, 480 * vis_xscale), ImGuiCond_FirstUseEver);
+#endif
 
         char str[128];
         sprintf(str, "Control##%s", win_id.c_str());
-        ImGui::SetNextWindowSize(ImVec2(640 * vis_xscale, 520 * vis_xscale), ImGuiCond_FirstUseEver);
         bool is_window_opened = true;
         ImGui::Begin(str, &is_window_opened, window_flags);
         {
-            // print selected camera info.
-            show_panel_print_selected_camera_info();
+            switch (stat_main) {
+            case em_State::MAIN:
+                {
+                    // print selected camera info.
+                    show_panel_print_selected_camera_info();
 
-            ImGui::SameLine();
+                    ImGui::SameLine();
 
-            // print FPS.
-            show_panel_print_fps();
+                    // print FPS.
+                    show_panel_print_fps();
 
-            ImGui::Separator();
+                    ImGui::Separator();
 
-            // movie rec.
-            show_panel_movie_rec();
+                    // movie rec.
+                    show_panel_movie_rec();
 
-            ImGui::Separator();
+                    ImGui::Separator();
 
-            show_panel_shutter_control();
-            show_panel_white_balance_control();
-            show_panel_iso_sensitivity_control();
-            show_panel_f_number_control();
-            // ND.
-            // FPS.
-
-            // PTZ
-            // focus.
-            // Stream setting.
-
-            if (ImGui::Button("Live View")) {
-                is_display_image = true;                
+                    show_panel_main();
+                }
+                break;
+            case em_State::SHUTTER:
+                show_panel_shutter_control();
+                break;
+            case em_State::WHITE_BALANCE:
+                break;
+            case em_State::ISO:
+                break;
+            case em_State::IRIS:
+                break;
+            case em_State::ND:
+                break;
+            case em_State::FPS:
+                break;
+            default:
+                ;
             }
+
+            // show_panel_shutter_control();
+            // show_panel_white_balance_control();
+            // show_panel_iso_sensitivity_control();
+            // show_panel_f_number_control();
+            // // ND.
+            // // FPS.
+
+            // // PTZ
+            // // focus.
+            // // Stream setting.
+
+            // if (ImGui::Button("Live View")) {
+            //     is_display_image = true;                
+            // }
         }
         ImGui::End();
 
@@ -748,10 +929,52 @@ public:
 
     bool display_live_view(const std::string &win_id)
     {
-        bool ret = false;
-        if (is_display_image) ret = show_panel_live_view();
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.FrameRounding = 8.0f * vis_xscale;
+        style.GrabRounding = 16.0f * vis_xscale;
 
-        return ret;
+        ImVec4* colors = style.Colors;
+        colors[ImGuiCol_FrameBg] = ImVec4(0.43f, 0.43f, 0.43f, 0.39f);
+        colors[ImGuiCol_TitleBg] = ImVec4(0.27f, 0.27f, 0.54f, 0.83f);
+        colors[ImGuiCol_TitleBgActive] = ImVec4(0.32f, 0.32f, 0.63f, 0.87f);
+        colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
+
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNav;
+
+#if 1
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 win_pos = viewport->Pos;
+        ImVec2 win_size = viewport->Size;
+        win_pos.x *= vis_xscale;
+        win_pos.y *= vis_xscale;
+        win_size.x *= vis_xscale;
+        win_size.y *= vis_xscale;
+
+        // ImGui::SetNextWindowPos(ImVec2(0 * vis_xscale, 0 * vis_xscale), ImGuiCond_Appearing);
+        // ImGui::SetNextWindowSize(ImVec2(800 * vis_xscale, 480 * vis_xscale), ImGuiCond_Appearing);
+        ImGui::SetNextWindowPos(win_pos, ImGuiCond_Appearing);
+        ImGui::SetNextWindowSize(win_size, ImGuiCond_Appearing);
+#else
+        // Always center this window when appearing
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f), ImGuiCond_FirstUseEver);
+#endif
+
+        char str[128];
+        sprintf(str, "Live View##%s", win_id.c_str());
+        bool is_window_opened = true;
+        ImGui::Begin(str, &is_window_opened, window_flags);
+        {
+            show_panel_live_view(tex_width);
+
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                stat_main = stat_main_bkup;
+            }
+        }
+        ImGui::End();
+
+        return is_window_opened;
     }
 
     bool display_http_digest_login_window(const std::string &win_id)
@@ -766,34 +989,34 @@ public:
         colors[ImGuiCol_TitleBgActive] = ImVec4(0.32f, 0.32f, 0.63f, 0.87f);
         colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
 
-        static bool no_titlebar = false;
-        static bool no_resize = false;
-        static bool no_move = false;
-        static bool no_scrollbar = false;
-        static bool no_collapse = false;
-        static bool no_menu = true;
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
+        window_flags = window_flags & ~ImGuiWindowFlags_NoTitleBar;
 
-        // Demonstrate the various window flags. Typically you would just use the default.
-        ImGuiWindowFlags window_flags = 0;
-        if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
-        if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
-        if (no_move)      window_flags |= ImGuiWindowFlags_NoMove;
-        if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
-        if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
-        if (!no_menu)     window_flags |= ImGuiWindowFlags_MenuBar;
+#if 0
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 win_pos(viewport->WorkPos.x * vis_xscale, viewport->WorkPos.y * vis_xscale);
+        ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
 
+        // ImGui::SetNextWindowPos(ImVec2(0 * vis_xscale, 0 * vis_xscale), ImGuiCond_Appearing);
+        // ImGui::SetNextWindowSize(ImVec2(800 * vis_xscale, 480 * vis_xscale), ImGuiCond_Appearing);
+        ImGui::SetNextWindowPos(win_pos, ImGuiCond_Appearing);
+        ImGui::SetNextWindowSize(win_size, ImGuiCond_Appearing);
+#else
         // Always center this window when appearing
         ImVec2 center = ImGui::GetMainViewport()->GetCenter();
-        ImGui::SetNextWindowPos(center, ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f), ImGuiCond_Appearing);
+#endif
 
-        char str[128];
-        sprintf(str, "SSH Login##%s", win_id.c_str());
-        ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f), ImGuiCond_FirstUseEver);
+        // char str[128];
+        // sprintf(str, "Login -->##%s", win_id.c_str());
+        auto &rs = remote_server;
+        std::string str = rs.ip_address + ":" + rs.port + " / " + "[SRT]" + (rs.is_srt_listener ? "Listener" : "Caller") + ":" + rs.srt_port;
         bool is_window_opened = true;
-        ImGui::Begin(str, &is_window_opened, window_flags);
+        ImGui::Begin(str.c_str(), &is_window_opened, window_flags);
         {
-            // print selected camera info.
-            show_panel_print_selected_camera_info();
+            // // print selected camera info.
+            // show_panel_print_selected_camera_info();
 
             auto &rs = remote_server;
             // user name.
@@ -842,18 +1065,34 @@ public:
                 }
             }
 
-            // if CGI is OK?
-            {
-                auto is_update = cgi->is_update_cmd_info();
+            switch (stat_main) {
+            case em_State::MAIN:
+            case em_State::SHUTTER:
+            case em_State::WHITE_BALANCE:
+            case em_State::ISO:
+            case em_State::IRIS:
+            case em_State::ND:
+            case em_State::FPS:
+                {
+                    auto is_update = cgi->is_update_cmd_info();
 
-                if (is_update) cgi->fetch();
+                    if (is_update) cgi->fetch();
 
-                is_window_opened = display_camera_window(win_id);
+                    is_window_opened = display_camera_window(win_id);
 
-                if (is_update) cgi->next();
+                    if (is_update) cgi->next();
+                }
+                break;
+
+            case em_State::LIVE_VIEW:
+                {
+                    is_window_opened = display_live_view(win_id);
+                }
+                break;
+            default:
+                ;
             }
 
-            is_display_image = display_live_view(win_id);
             break;
 
         default:
@@ -907,7 +1146,13 @@ public:
             }
         }
 
-        return ret && ret_inq && ret_set;
+        ret = (ret && ret_inq && ret_set);
+
+        if (ret) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));   // TODO: wait event.
+        }
+
+        return ret;
     }
 
     bool DISCONNECT()

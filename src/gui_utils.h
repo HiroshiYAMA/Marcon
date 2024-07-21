@@ -66,6 +66,8 @@ constexpr GLfloat tex_borderColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 // visualized scale of display.
 extern float vis_xscale, vis_yscale;
 
+constexpr auto app_font_scale = 2.0f;
+
 extern std::string init_glfw();
 extern void setup_imgui(GLFWwindow* window, const char *glsl_version);
 extern void cleanup_imgui_glfw(GLFWwindow* window);
@@ -146,6 +148,10 @@ template <typename T> void put_arrowbutton_repeat_multi(const char* button_str, 
 extern void put_OnOff_button(const char* button_str, int &flag);
 extern void put_OnOff_button(const char* button_str, bool &flag);
 
+extern void show_panel_texture_simple(const GLuint tex_id, GLsizei width, GLsizei height, std::string title,
+    ImGuiWindowFlags window_flags = 0,
+    bool v_flip_flag = false,
+    const std::vector<std::string> info_str = {});
 extern void show_panel_texture(const GLuint tex_id, GLsizei width, GLsizei height, std::string title,
     ImGuiWindowFlags window_flags = 0,
     bool v_flip_flag = false,

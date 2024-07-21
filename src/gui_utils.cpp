@@ -81,8 +81,9 @@ void setup_imgui(GLFWwindow* window, const char *glsl_version)
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
-    // ImGui::StyleColorsDark();
-    ImGui::StyleColorsClassic();
+    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsClassic();
+    // ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -107,6 +108,7 @@ void setup_imgui(GLFWwindow* window, const char *glsl_version)
     ImFontConfig font_cfg;
     font_cfg.SizePixels = 13.0f * vis_xscale;
     io.Fonts->AddFontDefault(&font_cfg);
+    io.FontGlobalScale = app_font_scale;
 }
 
 void cleanup_imgui_glfw(GLFWwindow* window)
@@ -126,7 +128,7 @@ void setDisplayModeFullscreen(GLFWwindow* window)
     const GLFWvidmode *vmode = glfwGetVideoMode(monitor);
     glfwSetWindowMonitor(window, monitor, 0, 0, vmode->width, vmode->height, vmode->refreshRate);	// フルスクリーン //
 
-    ImGui::StyleColorsDark();
+    // ImGui::StyleColorsDark();
     ImGui::GetStyle().FrameBorderSize = 1.0f;
 }
 
@@ -142,7 +144,7 @@ void setDisplayModeWindow(GLFWwindow* window, GLsizei width, GLsizei height)
     glfwSetWindowMonitor(window, NULL, pos_w, pos_h, width, height, vmode->refreshRate);
     glfwSetWindowAspectRatio(window, width, height);	// アスペクト比固定 //
 
-    ImGui::StyleColorsClassic();
+    // ImGui::StyleColorsClassic();
     ImGui::GetStyle().FrameBorderSize = 1.0f;
 }
 
@@ -337,7 +339,7 @@ void display_textures(GLuint num, const GLuint *texIDs, GLsizei width, GLsizei h
         const auto uv_b = v_flip_flag ? ImVec2(1, 1) : ImVec2(1, 0);
         for (auto i = 0; i < num; i++) {
             // draw_list->AddImage((ImTextureID)texIDs[i], ImVec2(p.x, p.y + dh * i), ImVec2(p.x + canvas_size.x, p.y + dh * (i + 1)), uv_a, uv_b);
-            ImGui::Image((ImTextureID)texIDs[i], ImVec2(width, height), uv_a, uv_b);
+            ImGui::Image(reinterpret_cast<ImTextureID>(texIDs[i]), ImVec2(width, height), uv_a, uv_b);
         }
 
         // display information.
@@ -411,16 +413,45 @@ void put_OnOff_button(const char* button_str, bool &flag)
     ImGui::SameLine();ImGui::Text("%s", flag_str.c_str());
 }
 
-void show_panel_texture(const GLuint tex_id, GLsizei width, GLsizei height, std::string title,
+void show_panel_texture_simple(const GLuint tex_id, GLsizei width, GLsizei height, std::string title,
     ImGuiWindowFlags window_flags,
     bool v_flip_flag,
     const std::vector<std::string> info_str)
 {
     window_flags |= ImGuiWindowFlags_NoCollapse;
 
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.FrameRounding = 8.0f * vis_xscale;
-    style.GrabRounding = 16.0f * vis_xscale;
+    if (ImGui::BeginChild(title.c_str(), ImVec2(width, height), false, window_flags)) {
+        // テクスチャを表示.
+        const auto uv_a = v_flip_flag ? ImVec2(0, 0) : ImVec2(0, 1);
+        const auto uv_b = v_flip_flag ? ImVec2(1, 1) : ImVec2(1, 0);
+        ImGui::Image(reinterpret_cast<ImTextureID>(tex_id), ImVec2(width, height), uv_a, uv_b);
+
+        // display information.
+        {
+            ImGuiStyle& style = ImGui::GetStyle();
+            auto fr = style.FrameRounding;
+            auto gr = style.GrabRounding;
+
+            style.FrameRounding = 0.0f;
+            style.GrabRounding = 0.0f;
+            for (auto &e : info_str) {
+                ImGui::Button(e.c_str());
+            }
+
+            style.FrameRounding = fr;
+            style.GrabRounding = gr;
+        }
+
+    }
+    ImGui::EndChild();
+}
+
+void show_panel_texture(const GLuint tex_id, GLsizei width, GLsizei height, std::string title,
+    ImGuiWindowFlags window_flags,
+    bool v_flip_flag,
+    const std::vector<std::string> info_str)
+{
+    window_flags |= ImGuiWindowFlags_NoCollapse;
 
     const ImVec2 canvas_margin(18, 36);
     const auto aspect = GLfloat(width) / GLfloat(height);
@@ -445,7 +476,7 @@ void show_panel_texture(const GLuint tex_id, GLsizei width, GLsizei height, std:
         // テクスチャを表示.
         const auto uv_a = v_flip_flag ? ImVec2(0, 0) : ImVec2(0, 1);
         const auto uv_b = v_flip_flag ? ImVec2(1, 1) : ImVec2(1, 0);
-        ImGui::Image((ImTextureID)tex_id, ImVec2(width, width / aspect), uv_a, uv_b);
+        ImGui::Image(reinterpret_cast<ImTextureID>(tex_id), ImVec2(width, width / aspect), uv_a, uv_b);
 
         // display information.
         {
@@ -472,7 +503,7 @@ void show_panel_inputtext(const char *id_str, std::string &str, int width, bool 
 {
     ImGui::PushID(id_str);
 
-    ImGui::PushItemWidth(width * vis_xscale);
+    ImGui::PushItemWidth(width * vis_xscale * app_font_scale);
     std::string tmp_str = str;
     tmp_str.reserve(256);
     ImGui::InputTextWithHint("##input text", str_hint.c_str(), tmp_str.data(), tmp_str.capacity(), is_password ? ImGuiInputTextFlags_Password : ImGuiInputTextFlags_None);
@@ -486,7 +517,7 @@ void show_panel_input_decimal(const char *id_str, std::string &str, int width, c
 {
     ImGui::PushID(id_str);
 
-    ImGui::PushItemWidth(width * vis_xscale);
+    ImGui::PushItemWidth(width * vis_xscale * app_font_scale);
     std::string tmp_str = str;
     tmp_str.reserve(256);
     ImGui::InputTextWithHint("##input decimal", str_hint.c_str(), tmp_str.data(), tmp_str.capacity(), ImGuiInputTextFlags_CharsDecimal);

@@ -95,10 +95,10 @@ private:
 
         auto &rs_info = remote_server_info;
         auto &rs = rs_info.remote_server;
-        show_panel_input_ip_address("IP address", rs.ip_address, 120, "IPv4 adress"); ImGui::SameLine();
-        show_panel_input_port_number("Port number", rs.port, 50); ImGui::SameLine();
+        show_panel_input_ip_address("IP address", rs.ip_address, 10 * 13.0f, "IPv4 adress"); ImGui::SameLine();
+        show_panel_input_port_number("Port number", rs.port, 4 * 13.0f); ImGui::SameLine();
         ImGui::Checkbox("[SRT] Listener", &rs.is_srt_listener); ImGui::SameLine();
-        show_panel_input_port_number("[SRT] Port number", rs.srt_port, 50); ImGui::SameLine();
+        show_panel_input_port_number("[SRT] Port number", rs.srt_port, 4 * 13.0f); ImGui::SameLine();
         if (ImGui::Button("Add")) {
             if (rs.ip_address != "" && rs.port != "" && rs.srt_port != "") {
                 auto &key = rs.ip_address;
@@ -115,6 +115,7 @@ private:
         ImGui::Separator();
 
         set_style_color(2.0f / 7.0f);
+
         for (auto &[k, v] : remote_server_info_DB) {
             ImGui::PushID(k.c_str());
 
@@ -139,6 +140,9 @@ private:
 
             ImGui::PopID();
         }
+
+        reset_style_color();
+
         // for (auto i = 0; i < remote_server_DB.size(); i++) {
         //     ImGui::PushID(i);
 
@@ -199,7 +203,6 @@ private:
 
         //     ImGui::PopID();
         // }
-        reset_style_color();
 
         ImGui::PopID();
     }
@@ -216,24 +219,17 @@ private:
         colors[ImGuiCol_TitleBgActive] = ImVec4(0.32f, 0.32f, 0.63f, 0.87f);
         colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
 
-        static bool no_titlebar = false;
-        static bool no_resize = false;
-        static bool no_move = false;
-        static bool no_scrollbar = false;
-        static bool no_collapse = false;
-        static bool no_menu = false;
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings;
+        window_flags = window_flags | ImGuiWindowFlags_MenuBar;
 
-        // Demonstrate the various window flags. Typically you would just use the default.
-        ImGuiWindowFlags window_flags = 0;
-        if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
-        if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
-        if (no_move)      window_flags |= ImGuiWindowFlags_NoMove;
-        if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
-        if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
-        if (!no_menu)     window_flags |= ImGuiWindowFlags_MenuBar;
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 win_pos(viewport->WorkPos.x * vis_xscale, viewport->WorkPos.y * vis_xscale);
+        ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
 
-        ImGui::SetNextWindowPos(ImVec2(10 * vis_xscale, 10 * vis_xscale), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(ImVec2(200 * vis_xscale, 200 * vis_xscale), ImGuiCond_FirstUseEver);
+        // ImGui::SetNextWindowPos(ImVec2(0 * vis_xscale, 0 * vis_xscale), ImGuiCond_Appearing);
+        // ImGui::SetNextWindowSize(ImVec2(800 * vis_xscale, 480 * vis_xscale), ImGuiCond_Appearing);
+        ImGui::SetNextWindowPos(win_pos, ImGuiCond_Appearing);
+        ImGui::SetNextWindowSize(win_size, ImGuiCond_Appearing);
 
         ImGui::Begin("Launcher", NULL, window_flags);
         {
@@ -363,19 +359,6 @@ public:
             // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
             if (show_demo_window)
                 ImGui::ShowDemoWindow(&show_demo_window);
-
-            {
-                if (!ImGui::Begin("YYY"))
-                {
-                    // Early out if the window is collapsed, as an optimization.
-                    ImGui::End();
-                    is_loop = false;
-                }
-
-                if (ImGui::Button("Quit")) is_loop = false;
-
-                ImGui::End();
-            }
 
             // display launcher window.
             display_launcher_window();
