@@ -467,19 +467,14 @@ public:
     auto &inquiry_imaging() { return cmd_info.imaging; }
     auto &inquiry_project() { return cmd_info.project; }
 
-    bool is_update_cmd_info()
-    {
-        auto ret = is_update_cmd_info_list.load();
-        if (ret) is_update_cmd_info_list.store(false);
-
-        return ret;
-    }
+    bool is_update_cmd_info() { return is_update_cmd_info_list.load(); }
 
     void fetch(bool latest = false)
     {
         std::lock_guard<std::mutex> lg(mtx);
 
         cmd_info = latest ? cmd_info_list->PeekLatest() : cmd_info_list->Peek();
+        is_update_cmd_info_list.store(false);
     }
 
     void next(bool latest = false)
