@@ -184,6 +184,130 @@ private:
         ImGui::PopID();
     }
 
+    // select value listbox.
+    template<typename T, typename Tfunc=std::function<void(T)>> void show_panel_select_value_listbox(
+        const char *id_str,
+        T &idx, T idx_min, T idx_max,
+        const std::list<std::pair<T, std::string>> &lst,
+        Tfunc func_set,
+        float key_delay = 0.275f, float key_rate = 0.050f
+    )
+    {
+        idx = static_cast<T>(std::clamp(static_cast<int>(idx), static_cast<int>(idx_min), static_cast<int>(idx_max)));
+
+        auto &vec = lst;
+        {
+            ImGui::PushID(id_str);
+
+            ImGuiStyle& style = ImGui::GetStyle();
+
+            ImGui::BeginGroup();
+
+            if (ImGui::BeginChild("CHILD", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+            {
+                ImVec2 p = ImGui::GetCursorScreenPos();
+                ImVec2 win_size = ImGui::GetWindowSize();
+
+                auto &io = ImGui::GetIO();
+                auto key_delay_bkup = io.KeyRepeatDelay;
+                auto key_rate_bkup = io.KeyRepeatRate;
+                io.KeyRepeatDelay = key_delay;
+                io.KeyRepeatRate = key_rate;
+
+                auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
+                bool is_changed = false;
+
+                // centering.
+                const auto text_size = ImGui::CalcTextSize("A");
+                const auto pad_frame = style.FramePadding;
+                const ImVec2 ar_size(text_size.x + pad_frame.x, text_size.y + pad_frame.y);
+                ImVec2 p_up(p.x + (win_size.x / 2) - (ar_size.x / 2) - pad_frame.x, p.y + 4.0f);
+                ImGui::SetCursorScreenPos(p_up);
+                ImGui::PushButtonRepeat(true);
+                if (ImGui::ArrowButton("##UP", ImGuiDir_Up)
+                    || ImGui::IsKeyPressed(ImGuiKey_E)
+                    || ImGui::IsKeyPressed(ImGuiKey_UpArrow)
+                ) {
+                    if (itr != vec.begin()) itr--;
+                    is_changed = true;
+                }
+                ImGui::PopButtonRepeat();
+
+                ImVec2 p_list(p.x, p.y + (win_size.y * (1.0f - 0.5f) / 2));
+                ImGui::SetCursorScreenPos(p_list);
+                if (ImGui::BeginChild("CHILD_CHILD", ImVec2(-1, win_size.y * 0.5f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
+                {
+                    ImGuiStyle& style = ImGui::GetStyle();
+                    auto fr = style.FrameRounding;
+                    auto gr = style.GrabRounding;
+
+                    style.FrameRounding = 0.0f;
+                    style.GrabRounding = 0.0f;
+
+                    auto fb = style.FrameBorderSize;
+
+                    for (auto &[k, v]: vec) {
+                        if (k == idx) {
+                            set_style_color(4.0f / 7.0f, 0.9f, 0.9f);
+
+                            ImGui::Button(v.c_str(), ImVec2(-1, 0));
+                            ImGui::SetScrollHereY(0.5f); // 0.0f:top, 0.5f:center, 1.0f:bottom
+
+                            reset_style_color();
+
+                        } else {
+                            style.FrameBorderSize = 0.0f;
+                            set_style_color(5.0f, 0.1f, 0.1f);
+
+                            ImGui::Button(v.c_str(), ImVec2(-1, 0));
+
+                            reset_style_color();
+                            style.FrameBorderSize = fb;
+                        }
+                    }
+
+                    style.FrameRounding = fr;
+                    style.GrabRounding = gr;
+                }
+                ImGui::EndChild();
+
+                // centering.
+                ImVec2 p_down(p_up.x, win_size.y - ar_size.y + (0.0f - 4.0f));
+                ImGui::SetCursorScreenPos(p_down);
+                ImGui::PushButtonRepeat(true);
+                if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down)
+                    || ImGui::IsKeyPressed(ImGuiKey_C)
+                    || ImGui::IsKeyPressed(ImGuiKey_DownArrow)
+                ) {
+                    itr++;
+                    if (itr == vec.end()) itr--;
+                    is_changed = true;
+                }
+                ImGui::PopButtonRepeat();
+
+                io.KeyRepeatDelay = key_delay_bkup;
+                io.KeyRepeatRate = key_rate_bkup;
+
+                if (is_changed) {
+                    auto &[k, v] = *itr;
+                    idx = k;   // pre-set for GUI.
+                    func_set(k);
+                }
+
+            }
+            ImGui::EndChild();
+
+            ImGui::EndGroup();
+
+            ImGui::PopID();
+        }
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // Main control panel.
+    /////////////////////////////////////////////////////////////////
     void show_panel_main()
     {
         ImGui::PushID("Main");
@@ -338,7 +462,11 @@ private:
         ImGui::PopID();
     }
 
+
+
+    /////////////////////////////////////////////////////////////////
     // focus control.
+    /////////////////////////////////////////////////////////////////
     void show_panel_focus_control()
     {
         ImGui::PushID("Focus_Control");
@@ -350,7 +478,11 @@ private:
         ImGui::PopID();
     }
 
+
+
+    /////////////////////////////////////////////////////////////////
     // F number control.
+    /////////////////////////////////////////////////////////////////
     void show_panel_f_number_control()
     {
         ImGui::PushID("F_Number_Control");
@@ -362,7 +494,11 @@ private:
         ImGui::PopID();
     }
 
+
+
+    /////////////////////////////////////////////////////////////////
     // iso sensitivity control.
+    /////////////////////////////////////////////////////////////////
     void show_panel_iso_sensitivity_control()
     {
         ImGui::PushID("ISO_Sensitivity_Control");
@@ -374,126 +510,11 @@ private:
         ImGui::PopID();
     }
 
-    // select value listbox.
-    template<typename T, typename Tfunc=std::function<void(T)>> void show_panel_select_value_listbox(
-        const char *id_str,
-        T &idx, T idx_min, T idx_max,
-        const std::list<std::pair<T, std::string>> &lst,
-        Tfunc func_set,
-        float key_delay = 0.275f, float key_rate = 0.050f
-    )
-    {
-        idx = static_cast<T>(std::clamp(static_cast<int>(idx), static_cast<int>(idx_min), static_cast<int>(idx_max)));
 
-        auto &vec = lst;
-        {
-            ImGui::PushID(id_str);
 
-            ImGuiStyle& style = ImGui::GetStyle();
-
-            ImGui::BeginGroup();
-
-            if (ImGui::BeginChild("CHILD", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
-            {
-                ImVec2 p = ImGui::GetCursorScreenPos();
-                ImVec2 win_size = ImGui::GetWindowSize();
-
-                auto &io = ImGui::GetIO();
-                auto key_delay_bkup = io.KeyRepeatDelay;
-                auto key_rate_bkup = io.KeyRepeatRate;
-                io.KeyRepeatDelay = key_delay;
-                io.KeyRepeatRate = key_rate;
-
-                auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
-                bool is_changed = false;
-
-                // centering.
-                const auto text_size = ImGui::CalcTextSize("A");
-                const auto pad_frame = style.FramePadding;
-                const ImVec2 ar_size(text_size.x + pad_frame.x, text_size.y + pad_frame.y);
-                ImVec2 p_up(p.x + (win_size.x / 2) - (ar_size.x / 2) - pad_frame.x, p.y + 4.0f);
-                ImGui::SetCursorScreenPos(p_up);
-                ImGui::PushButtonRepeat(true);
-                if (ImGui::ArrowButton("##UP", ImGuiDir_Up)
-                    || ImGui::IsKeyPressed(ImGuiKey_E)
-                    || ImGui::IsKeyPressed(ImGuiKey_UpArrow)
-                ) {
-                    if (itr != vec.begin()) itr--;
-                    is_changed = true;
-                }
-                ImGui::PopButtonRepeat();
-
-                ImVec2 p_list(p.x, p.y + (win_size.y * (1.0f - 0.5f) / 2));
-                ImGui::SetCursorScreenPos(p_list);
-                if (ImGui::BeginChild("CHILD_CHILD", ImVec2(-1, win_size.y * 0.5f), ImGuiChildFlags_Border, ImGuiWindowFlags_None))
-                {
-                    ImGuiStyle& style = ImGui::GetStyle();
-                    auto fr = style.FrameRounding;
-                    auto gr = style.GrabRounding;
-
-                    style.FrameRounding = 0.0f;
-                    style.GrabRounding = 0.0f;
-
-                    auto fb = style.FrameBorderSize;
-
-                    for (auto &[k, v]: vec) {
-                        if (k == idx) {
-                            set_style_color(4.0f / 7.0f, 0.9f, 0.9f);
-
-                            ImGui::Button(v.c_str(), ImVec2(-1, 0));
-                            ImGui::SetScrollHereY(0.5f); // 0.0f:top, 0.5f:center, 1.0f:bottom
-
-                            reset_style_color();
-
-                        } else {
-                            style.FrameBorderSize = 0.0f;
-                            set_style_color(5.0f, 0.1f, 0.1f);
-
-                            ImGui::Button(v.c_str(), ImVec2(-1, 0));
-
-                            reset_style_color();
-                            style.FrameBorderSize = fb;
-                        }
-                    }
-
-                    style.FrameRounding = fr;
-                    style.GrabRounding = gr;
-                }
-                ImGui::EndChild();
-
-                // centering.
-                ImVec2 p_down(p_up.x, win_size.y - ar_size.y + (0.0f - 4.0f));
-                ImGui::SetCursorScreenPos(p_down);
-                ImGui::PushButtonRepeat(true);
-                if (ImGui::ArrowButton("##DOWN", ImGuiDir_Down)
-                    || ImGui::IsKeyPressed(ImGuiKey_C)
-                    || ImGui::IsKeyPressed(ImGuiKey_DownArrow)
-                ) {
-                    itr++;
-                    if (itr == vec.end()) itr--;
-                    is_changed = true;
-                }
-                ImGui::PopButtonRepeat();
-
-                io.KeyRepeatDelay = key_delay_bkup;
-                io.KeyRepeatRate = key_rate_bkup;
-
-                if (is_changed) {
-                    auto &[k, v] = *itr;
-                    idx = k;   // pre-set for GUI.
-                    func_set(k);
-                }
-
-            }
-            ImGui::EndChild();
-
-            ImGui::EndGroup();
-
-            ImGui::PopID();
-        }
-    }
-
-    // shutter value.
+    /////////////////////////////////////////////////////////////////
+    // shutter control.
+    /////////////////////////////////////////////////////////////////
     void show_panel_shutter_value()
     {
         auto &imaging = cgi->inquiry_imaging();
@@ -735,7 +756,6 @@ private:
         ImGui::PopID();
     }
 
-    // shutter control.
     void show_panel_shutter_control()
     {
         ImGui::PushID("Shutter_Control");
@@ -789,7 +809,11 @@ private:
         ImGui::PopID();
     }
 
+
+
+    /////////////////////////////////////////////////////////////////
     // white_balance control.
+    /////////////////////////////////////////////////////////////////
     void show_panel_white_balance_control()
     {
         ImGui::PushID("White_Balance_Control");
@@ -801,6 +825,11 @@ private:
         ImGui::PopID();
     }
 
+
+
+    /////////////////////////////////////////////////////////////////
+    // live view.
+    /////////////////////////////////////////////////////////////////
     void show_panel_live_view(GLsizei panel_width, bool display_info = true, bool texture_simple = false)
     {
         // if live view is OK?
@@ -872,6 +901,8 @@ private:
         }
         ImGui::EndChild();
     }
+
+
 
     double calc_fps() const
     {
