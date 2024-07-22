@@ -224,12 +224,7 @@ private:
     {
         ImGui::PushID("STATE_MODE_STR");
 
-        auto itr = std::find_if(vec.begin(), vec.end(), [&state](auto &e){ return e.first == state; });
-        std::string mode_str = "---";
-        if (itr != vec.end()) {
-            auto &[k, v] = *itr;
-            mode_str = v;
-        }
+        std::string mode_str = get_string_from_pair_list(vec, state);
 
         if (center) {
             centering_text_pos(mode_str.c_str());
@@ -422,12 +417,7 @@ private:
                                     }
                                     auto idx = imaging.ExposureShutterModeState;
                                     auto &vec = exposure_shutter_mode_state;
-                                    auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
-                                    std::string mode_str = "---";
-                                    if (itr != vec.end()) {
-                                        auto &[k, v] = *itr;
-                                        mode_str = v;
-                                    }
+                                    std::string mode_str = get_string_from_pair_list(vec, idx);
                                     ImGui::Text("%s", mode_str.c_str());
                                     show_panel_shutter_value();
                                 }
@@ -506,12 +496,7 @@ private:
                                     }
                                     auto idx = cgi->get_wb_mode_state();
                                     auto &vec = white_balance_mode_state;
-                                    auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
-                                    std::string mode_str = "---";
-                                    if (itr != vec.end()) {
-                                        auto &[k, v] = *itr;
-                                        mode_str = v;
-                                    }
+                                    std::string mode_str = get_string_from_pair_list(vec, idx);
                                     ImGui::Text("%s", mode_str.c_str());
                                     show_panel_wb_value();
                                 }
@@ -629,11 +614,7 @@ private:
                 std::string str = "---";
                 if (CGICmd::exposure_exposure_time.contains(frame_rate)) {
                     auto &lst = CGICmd::exposure_exposure_time[frame_rate];
-                    using e_type = decltype(lst.front());
-                    auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
-                    if (itr != lst.end()) {
-                        str = (*itr).second;
-                    }
+                    str = get_string_from_pair_list(lst, idx);
                 }
                 if (center) centering_text_pos(str.c_str());
                 ImGui::Text("%s", str.c_str());
@@ -643,14 +624,9 @@ private:
         case CGICmd::ExposureShutterModeState_ANGLE:
             {
                 auto idx = imaging.ExposureAngle;
-
-                std::string str = "---";
                 auto &lst = CGICmd::exposure_angle;
-                using e_type = decltype(lst.front());
-                auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
-                if (itr != lst.end()) {
-                    str = (*itr).second;
-                }
+
+                std::string str = get_string_from_pair_list(lst, idx);
                 if (center) centering_text_pos(str.c_str());
                 ImGui::Text("%s", str.c_str());
             }
@@ -1004,14 +980,9 @@ private:
         case CGICmd::em_WhiteBalanceModeState::MANUAL:
             {
                 auto idx = imaging.WhiteBalanceColorTemp;
-
-                std::string str = "---";
                 auto &lst = CGICmd::white_balance_color_temp;
-                using e_type = decltype(lst.front());
-                auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
-                if (itr != lst.end()) {
-                    str = (*itr).second;
-                }
+
+                std::string str = get_string_from_pair_list(lst, idx);
                 if (center) centering_text_pos(str.c_str());
                 ImGui::Text("%s", str.c_str());
             }

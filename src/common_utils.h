@@ -110,6 +110,18 @@ auto conv_fps_ms2ND = [](double fps_ms) -> std::tuple<int, int> {
     return { N, D };
 };
 
+auto get_string_from_pair_list = [](const auto &vec, auto idx) -> std::string {
+    auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
+    std::string str = "---";
+    if (itr != vec.end()) {
+        auto &[k, v] = *itr;
+        str = v;
+    }
+
+    return str;
+};
+
+
 }
 
 #ifdef USE_JETSON_UTILS
