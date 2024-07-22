@@ -145,6 +145,8 @@ public:
 
 /////////////////////////////////////////////////////////////////////
 // imaging.
+/////////////////////////////////////////////////////////////////
+// shutter.
 enum em_ExposureShutterMode
 {
     ExposureShutterMode_SPEED,
@@ -170,6 +172,39 @@ NLOHMANN_JSON_SERIALIZE_ENUM( em_ExposureShutterModeState, {
     {ExposureShutterModeState_ECS, "ecs"},
     {ExposureShutterModeState_AUTO, "auto"},
 })
+
+/////////////////////////////////////////////////////////////////
+// white balance.
+enum em_WhiteBalanceGainTemp
+{
+    WhiteBalanceGainTemp_GAIN,
+    WhiteBalanceGainTemp_TEMP,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_WhiteBalanceGainTemp, {
+    {WhiteBalanceGainTemp_GAIN, "gain"},
+    {WhiteBalanceGainTemp_TEMP, "temp"},
+})
+
+enum em_WhiteBalanceMode
+{
+    WhiteBalanceMode_ATW,
+    WhiteBalanceMode_MEMORY_A,
+    WhiteBalanceMode_PRESET,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_WhiteBalanceMode, {
+    {WhiteBalanceMode_ATW, "atw"},
+    {WhiteBalanceMode_MEMORY_A, "memory_a"},
+    {WhiteBalanceMode_PRESET, "preset"},
+})
+
+enum class em_WhiteBalanceModeState
+{
+    AUTO,
+    MANUAL,
+    INVALID,
+};
+
+
 
 struct st_Range
 {
@@ -197,6 +232,11 @@ struct st_Imaging
 
     /////////////////////////////////////////////////////////////////
     // white balance.
+    int WhiteBalanceColorTemp;  // 2000...15000 [K].
+    int WhiteBalanceColorTempCurrent;
+
+    em_WhiteBalanceMode WhiteBalanceMode;
+    em_WhiteBalanceGainTemp WhiteBalanceGainTemp;
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -373,6 +413,10 @@ public:
         cv_cmd_msg.notify_one();
     }
 
+
+
+    /////////////////////////////////////////////////////////////////
+    // shutter.
     // Auto:  /command/imaging.cgi?ExposureAutoShutterEnable=on
     // Speed: /command/imaging.cgi?ExposureShutterMode=speed&ExposureAutoShutterEnable=off&ExposureShutterSpeedEnable=on&ExposureECSEnable=off
     // Angle: /command/imaging.cgi?ExposureShutterMode=angle&ExposureAutoShutterEnable=off&ExposureECSEnable=off
@@ -425,6 +469,80 @@ public:
         set_command<CGICmd::st_Imaging>(msg);
     }
 
+
+
+    /////////////////////////////////////////////////////////////////
+    // white balance.
+    // ATW:           /command/imaging.cgi?WhiteBalanceMode=atw&WhiteBalanceOffsetColorTemp=0&WhiteBalanceOffsetTint=0
+    // memory_A(T/T): /command/imaging.cgi?WhiteBalanceMode=memory_a&WhiteBalanceGainTemp=temp&WhiteBalanceTint=0
+    // memory_A(R/B): /command/imaging.cgi?WhiteBalanceMode=memory_a&WhiteBalanceGainTemp=gain
+    // preset:        /command/imaging.cgi?WhiteBalanceMode=preset
+    void set_imaging_WhiteBalanceModeState (CGICmd::em_WhiteBalanceModeState state)
+    {
+        std::string msg;
+        switch (state) {
+        case CGICmd::em_WhiteBalanceModeState::AUTO:
+            msg = "WhiteBalanceMode=atw&WhiteBalanceOffsetColorTemp=0&WhiteBalanceOffsetTint=0";
+            break;
+        case CGICmd::em_WhiteBalanceModeState::MANUAL:
+            msg = "WhiteBalanceMode=memory_a&WhiteBalanceGainTemp=temp&WhiteBalanceTint=0";
+            break;
+        default:
+            return;
+        }
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_WhiteBalanceColorTemp(int idx)
+    {
+        std::string msg;
+        msg = "WhiteBalanceColorTemp=" + std::to_string(idx);
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    CGICmd::em_WhiteBalanceModeState get_wb_mode_state() const
+    {
+        using state_t = CGICmd::em_WhiteBalanceModeState;
+        state_t state = state_t::INVALID;
+
+        auto mode = cmd_info.imaging.WhiteBalanceMode;
+        auto gain_temp = cmd_info.imaging.WhiteBalanceGainTemp;
+
+        if (mode == CGICmd::WhiteBalanceMode_ATW) {
+            state = state_t::AUTO;
+        } else if (mode == CGICmd::WhiteBalanceMode_MEMORY_A
+            && gain_temp == CGICmd::WhiteBalanceGainTemp_TEMP
+            ) {
+            state = state_t::MANUAL;
+        }
+
+        return state;
+    }
+
+    void set_wb_mode_state(CGICmd::em_WhiteBalanceModeState state)
+    {
+        using state_t = CGICmd::em_WhiteBalanceModeState;
+
+        auto &mode = cmd_info.imaging.WhiteBalanceMode;
+        auto &gain_temp = cmd_info.imaging.WhiteBalanceGainTemp;
+
+        switch (state) {
+        case state_t::MANUAL:
+            mode = CGICmd::WhiteBalanceMode_MEMORY_A;
+            gain_temp = CGICmd::WhiteBalanceGainTemp_TEMP;
+            break;
+
+        case state_t::AUTO:
+        case state_t::INVALID:
+        default:
+            mode = CGICmd::WhiteBalanceMode_ATW;
+        }
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // inquiry.
     template<typename T> void inquiry(T& val)
     {
         std::string msg = "/command/inquiry.cgi?inqjson=";
@@ -471,6 +589,8 @@ public:
     auto &inquiry_status() { return cmd_info.status; }
     auto &inquiry_imaging() { return cmd_info.imaging; }
     auto &inquiry_project() { return cmd_info.project; }
+
+
 
     bool is_update_cmd_info() { return is_update_cmd_info_list.load(); }
 

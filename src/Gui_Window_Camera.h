@@ -83,7 +83,11 @@ public:
         CONTROL,
     };
 
-    enum class em_StateWhiteBalance {};
+    enum class em_StateWhiteBalance {
+        MODE,
+        CONTROL,
+    };
+
     enum class em_StateISO {};
     enum class em_StateIRIS {};
     enum class em_StateND {};
@@ -98,12 +102,23 @@ private:
         {CGICmd::ExposureShutterModeState_OFF, "Off"},
     };
 
+    const std::list<std::pair<CGICmd::em_WhiteBalanceModeState, std::string>> white_balance_mode_state = {
+        {CGICmd::em_WhiteBalanceModeState::AUTO, "ATW"},
+        {CGICmd::em_WhiteBalanceModeState::MANUAL, "Manual"},
+    };
+
     st_RemoteServer remote_server = {};
 
     em_State stat_main = em_State::MAIN;
     em_State stat_main_bkup = em_State::MAIN;
+
+    // shutter.
     em_StateShutter stat_shutter = em_StateShutter::CONTROL;
     CGICmd::em_ExposureShutterModeState shutter_mode_state_bkup = CGICmd::ExposureShutterModeState_AUTO;
+
+    // white balance.
+    em_StateWhiteBalance stat_wb = em_StateWhiteBalance::CONTROL;
+    CGICmd::em_WhiteBalanceModeState wb_mode_state_bkup = CGICmd::em_WhiteBalanceModeState::AUTO;
 
     // cudaStream_t m_cuda_stream = NULL;
 
@@ -489,6 +504,16 @@ private:
                                     if (ImGui::Button("WB") || ImGui::IsKeyPressed(ImGuiKey_V, false)) {
                                         stat_main = em_State::WHITE_BALANCE;
                                     }
+                                    auto idx = cgi->get_wb_mode_state();
+                                    auto &vec = white_balance_mode_state;
+                                    auto itr = std::find_if(vec.begin(), vec.end(), [&idx](auto &e){ return e.first == idx; });
+                                    std::string mode_str = "---";
+                                    if (itr != vec.end()) {
+                                        auto &[k, v] = *itr;
+                                        mode_str = v;
+                                    }
+                                    ImGui::Text("%s", mode_str.c_str());
+                                    show_panel_wb_value();
                                 }
                                 ImGui::EndChild();
                             }
@@ -600,8 +625,6 @@ private:
                 auto &project = cgi->inquiry_project();
                 auto frame_rate = project.RecFormatFrequency;
                 auto idx = imaging.ExposureExposureTime;
-                auto idx_min = imaging.ExposureExposureTimeRange.min;
-                auto idx_max = imaging.ExposureExposureTimeRange.max;
 
                 std::string str = "---";
                 if (CGICmd::exposure_exposure_time.contains(frame_rate)) {
@@ -620,8 +643,6 @@ private:
         case CGICmd::ExposureShutterModeState_ANGLE:
             {
                 auto idx = imaging.ExposureAngle;
-                auto idx_min = imaging.ExposureAngleRange.min;
-                auto idx_max = imaging.ExposureAngleRange.max;
 
                 std::string str = "---";
                 auto &lst = CGICmd::exposure_angle;
@@ -704,9 +725,6 @@ private:
     {
         ImGui::PushID("SHUTTER_AUTO");
 
-        auto &imaging = cgi->inquiry_imaging();
-        auto &state = imaging.ExposureShutterModeState;
-
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         if (ImGui::BeginTable("shutter_auto", 3, flags))
         {
@@ -741,7 +759,6 @@ private:
         ImGui::PushID("SHUTTER_SPEED");
 
         auto &imaging = cgi->inquiry_imaging();
-        auto &state = imaging.ExposureShutterModeState;
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         if (ImGui::BeginTable("shutter_speed", 3, flags))
@@ -786,7 +803,6 @@ private:
         ImGui::PushID("SHUTTER_ANGLE");
 
         auto &imaging = cgi->inquiry_imaging();
-        auto &state = imaging.ExposureShutterModeState;
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         if (ImGui::BeginTable("shutter_angle", 3, flags))
@@ -826,7 +842,6 @@ private:
         ImGui::PushID("SHUTTER_ECS");
 
         auto &imaging = cgi->inquiry_imaging();
-        auto &state = imaging.ExposureShutterModeState;
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         if (ImGui::BeginTable("shutter_ecs", 3, flags))
@@ -870,9 +885,6 @@ private:
     void show_panel_shutter_off()
     {
         ImGui::PushID("SHUTTER_OFF");
-
-        auto &imaging = cgi->inquiry_imaging();
-        auto &state = imaging.ExposureShutterModeState;
 
         ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         if (ImGui::BeginTable("shutter_off", 3, flags))
@@ -959,21 +971,222 @@ private:
     /////////////////////////////////////////////////////////////////
     // white_balance control.
     /////////////////////////////////////////////////////////////////
+    void show_panel_wb_mode_str(bool center = false)
+    {
+        ImGui::PushID("WB_MODE_STR");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto idx = cgi->get_wb_mode_state();
+        auto &vec = white_balance_mode_state;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_wb_value(bool center = false)
+    {
+        ImGui::PushID("WB_VALUE");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto state = cgi->get_wb_mode_state();
+
+        switch (state) {
+        case CGICmd::em_WhiteBalanceModeState::AUTO:
+            {
+                auto val = imaging.WhiteBalanceColorTempCurrent;
+                std::string str = std::to_string(val) + "(K)";
+
+                if (center) centering_text_pos(str.c_str());
+                ImGui::Text("%s", str.c_str());
+            }
+            break;
+
+        case CGICmd::em_WhiteBalanceModeState::MANUAL:
+            {
+                auto idx = imaging.WhiteBalanceColorTemp;
+
+                std::string str = "---";
+                auto &lst = CGICmd::white_balance_color_temp;
+                using e_type = decltype(lst.front());
+                auto itr = std::find_if(lst.begin(), lst.end(), [&idx](e_type e){ return e.first == idx; });
+                if (itr != lst.end()) {
+                    str = (*itr).second;
+                }
+                if (center) centering_text_pos(str.c_str());
+                ImGui::Text("%s", str.c_str());
+            }
+            break;
+
+        default:
+            ;
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_wb_mode()
+    {
+        ImGui::PushID("WB_MODE");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto state = cgi->get_wb_mode_state();
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("wb_mode", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                {
+                    auto f = [&](CGICmd::em_WhiteBalanceModeState val) -> void { cgi->set_imaging_WhiteBalanceModeState(val); };
+
+                    show_panel_select_value_listbox(
+                        "##WHITE_BALANCE_MODE_STATE",
+                        state,
+                        CGICmd::em_WhiteBalanceModeState::AUTO,
+                        CGICmd::em_WhiteBalanceModeState::MANUAL,
+                        white_balance_mode_state, f,
+                        0.5f, 0.1f
+                    );
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            stat_wb = em_StateWhiteBalance::CONTROL;
+
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_wb_auto()
+    {
+        ImGui::PushID("WB_AUTO");
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("wb_auto", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                {
+                    auto p = ImGui::GetCursorScreenPos();
+                    auto sz = ImGui::GetWindowSize();
+                    auto text_height = ImGui::GetTextLineHeightWithSpacing();
+                    auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height);
+                    ImGui::SetCursorScreenPos(p_center);
+                }
+                show_panel_wb_mode_str(true);
+                show_panel_wb_value(true);
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_wb_color_temp()
+    {
+        ImGui::PushID("WB_COLOR_TEMP");
+
+        auto &imaging = cgi->inquiry_imaging();
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("wb_color_temp", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                {
+                    auto &lst = CGICmd::white_balance_color_temp;
+                    auto f = [&](int val) -> void { cgi->set_imaging_WhiteBalanceColorTemp(val); };
+
+                    auto &[k_min, v_min] = lst.front();
+                    auto &[k_max, v_max] = lst.back();
+
+                    show_panel_select_value_listbox(
+                        "##WB_COLOR_TEMP",
+                        imaging.WhiteBalanceColorTemp,
+                        k_min,
+                        k_max,
+                        lst, f,
+                        0.5f, 0.1f
+                    );
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::PopID();
+    }
+
     void show_panel_white_balance_control()
     {
         ImGui::PushID("White_Balance_Control");
 
-        if (ImGui::Button("White Balance")) {
-            ;
-        }
+        auto &imaging = cgi->inquiry_imaging();
+        auto state = cgi->get_wb_mode_state();
 
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
-            stat_main = em_State::MAIN;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
-            ;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
-            stat_main_bkup = stat_main;
-            stat_main = em_State::LIVE_VIEW;
+        wb_mode_state_bkup = state;
+
+        if (stat_wb == em_StateWhiteBalance::MODE) {
+            show_panel_wb_mode();
+
+        } else if (stat_wb == em_StateWhiteBalance::CONTROL) {
+            switch (state) {
+            case CGICmd::em_WhiteBalanceModeState::AUTO:
+                show_panel_wb_auto();
+                break;
+
+            case CGICmd::em_WhiteBalanceModeState::MANUAL:
+                show_panel_wb_color_temp();
+                break;
+
+            case CGICmd::em_WhiteBalanceModeState::INVALID:
+                // set to AUTO mode.
+                state = CGICmd::em_WhiteBalanceModeState::AUTO;
+                cgi->set_imaging_WhiteBalanceModeState(state);
+                cgi->set_wb_mode_state(state);
+                break;
+
+            default:
+                stat_main = em_State::MAIN;
+            }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+                stat_main = em_State::MAIN;
+            } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
+                stat_wb = em_StateWhiteBalance::MODE;
+            } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+                stat_main_bkup = stat_main;
+                stat_main = em_State::LIVE_VIEW;
+            }
         }
 
         ImGui::PopID();

@@ -39,4 +39,7 @@ extern std::unordered_map<std::string, shutter_list> exposure_exposure_time;
 using angle_list = shutter_list;
 extern angle_list exposure_angle;
 
+using color_temp_list = shutter_list;
+extern color_temp_list white_balance_color_temp;
+
 }   // namespace CGICmd
