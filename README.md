@@ -13,7 +13,50 @@ git clone --recursive git@github.com:HiroshiYAMA/Marcon.git
 git submodule update --init --recursive
 ```
 
+## ビルド & インストール
+```bash
+mkdir -p build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make install
+
+# install ディレクトリ内に実行ファイル marcon が出来る。
+```
+
+## 実行
+```bash
+# install ディレクトリにて、 
+./marcon
+```
+
+## キーバインド
+### 共通
+| key | description |
+| --- | --- |
+| Enter | go to Live View |
+| ESC | back to previous |
+| Shift + Q | exit Application |
+
+### Camera Main パネル
+| key | description |
+| --- | --- |
+| W | go to FPS panel |
+| E | go to ISO panel |
+| R | go to Shutter panel |
+| X | go to ND panel |
+| C | go to IRIS panel |
+| V | go to White Balance panel |
+
+### Camera Control パネル
+| key | description |
+| --- | --- |
+| E, cursor UP | select item above |
+| V, curos DOWN | select item below |
+| X | go to MODE select panel |
+
 ## テストプログラムたち
 test ディレクトリ以下に置いてある。
 * [cgi_test](./test/cgi_test/)
+* [cgi_test_cpprestsdk](./test/cgi_test_cpprestsdk/)
+* [cgi_test_cpr](./test/cgi_test_cpr/)
 * [srt_receive](./test/srt_receive/)

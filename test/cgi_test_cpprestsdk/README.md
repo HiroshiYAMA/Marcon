@@ -26,5 +26,5 @@ make
 
 ## 実行
 ```bash
-./cppret_client 43.30.217.166 80 '/command/inquiry.cgi?inq=system'
+./cpprest_client 192.168.100.11 80 '/command/inquiry.cgi?inq=imaging'
 ```
