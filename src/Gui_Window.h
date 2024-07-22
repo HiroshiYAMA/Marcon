@@ -104,7 +104,8 @@ private:
         auto &rs = rs_info.remote_server;
         show_panel_input_ip_address("IP address", rs.ip_address, 10 * 13.0f, "IPv4 adress"); ImGui::SameLine();
         show_panel_input_port_number("Port number", rs.port, 4 * 13.0f); ImGui::SameLine();
-        ImGui::Checkbox("[SRT] Listener", &rs.is_srt_listener); ImGui::SameLine();
+        // ImGui::Checkbox("[SRT] Listener", &rs.is_srt_listener); ImGui::SameLine();
+        ImGui::Text("[SRT]:"); ImGui::SameLine();
         show_panel_input_port_number("[SRT] Port number", rs.srt_port, 4 * 13.0f); ImGui::SameLine();
         if (ImGui::Button("Add")) {
             if (rs.ip_address != "" && rs.port != "" && rs.srt_port != "") {
@@ -132,14 +133,20 @@ private:
             if (ImGui::Button(str.c_str())) {
                 auto &gui_win_camera = v.handle;
                 if (!gui_win_camera) {
-                    ;   // make unique ptr of Gui_Window_Camera.
                     gui_win_camera = std::make_unique<Gui_Window_Camera>(win_w, win_h, v.remote_server);
-                    state = em_State::CAMERA_CONTROL;
+                    if (gui_win_camera) {
+                        if (gui_win_camera->is_CONNECTED()) {
+                            state = em_State::CAMERA_CONTROL;
+                        } else {
+                            gui_win_camera->DISCONNECT();
+                            gui_win_camera.reset();
+                            state = em_State::LANCHER;
+                        }
+                    }
                 }
             }
             ImGui::SameLine();
             if (ImGui::Button("Delete")) {
-                ;   // reset unique ptr og Gui_Window_Camera.
                 remote_server_info_DB.erase(k);
 
                 ImGui::PopID();
@@ -293,6 +300,8 @@ public:
 
         remote_server_info_DB = std::move(decltype(remote_server_info_DB){});
         remote_server_info = {};
+        remote_server_info.remote_server.port = "80";
+        remote_server_info.remote_server.srt_port = "4201";
 
         is_loop = true;
 

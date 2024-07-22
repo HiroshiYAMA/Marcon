@@ -1571,6 +1571,11 @@ public:
         }
         ImGui::End();
 
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
+            is_window_opened = false;
+        }
+
         return is_window_opened;
     }
 
