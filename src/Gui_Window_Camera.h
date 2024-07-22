@@ -184,6 +184,47 @@ private:
         ImGui::PopID();
     }
 
+    void centering_text_pos(const char *text)
+    {
+        static std::atomic<uint64_t> id(0);
+
+        std::string id_str = "centering_text_pos";
+        auto id_tmp = id.load();
+        id_str += std::to_string(id_tmp);
+        id.store(id_tmp++);
+
+        ImVec2 p_center;
+        if (ImGui::BeginChild(id_str.c_str(), ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+        {
+                auto p = ImGui::GetCursorScreenPos();
+                auto sz = ImGui::GetWindowSize();
+                auto sz_text = ImGui::CalcTextSize(text);
+                p_center = ImVec2(p.x + (sz.x / 2) - (sz_text.x / 2), p.y);
+        }
+        ImGui::EndChild();
+        ImGui::SetCursorScreenPos(p_center);
+    }
+
+    template<typename S, typename V> void show_panel_state_mode_str(S state, const V &vec, bool center = false)
+    {
+        ImGui::PushID("STATE_MODE_STR");
+
+        auto itr = std::find_if(vec.begin(), vec.end(), [&state](auto &e){ return e.first == state; });
+        std::string mode_str = "---";
+        if (itr != vec.end()) {
+            auto &[k, v] = *itr;
+            mode_str = v;
+        }
+
+        if (center) {
+            centering_text_pos(mode_str.c_str());
+        }
+
+        ImGui::Text("%s", mode_str.c_str());
+
+        ImGui::PopID();
+    }
+
     // select value listbox.
     template<typename T, typename Tfunc=std::function<void(T)>> void show_panel_select_value_listbox(
         const char *id_str,
@@ -533,8 +574,22 @@ private:
     /////////////////////////////////////////////////////////////////
     // shutter control.
     /////////////////////////////////////////////////////////////////
-    void show_panel_shutter_value()
+    void show_panel_shutter_mode_str(bool center = false)
     {
+        ImGui::PushID("SHUTTER_MODE_STR");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto idx = imaging.ExposureShutterModeState;
+        auto &vec = exposure_shutter_mode_state;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_shutter_value(bool center = false)
+    {
+        ImGui::PushID("SHUTTER_VALUE");
+
         auto &imaging = cgi->inquiry_imaging();
         auto &state = imaging.ExposureShutterModeState;
 
@@ -557,6 +612,7 @@ private:
                         str = (*itr).second;
                     }
                 }
+                if (center) centering_text_pos(str.c_str());
                 ImGui::Text("%s", str.c_str());
             }
             break;
@@ -574,6 +630,7 @@ private:
                 if (itr != lst.end()) {
                     str = (*itr).second;
                 }
+                if (center) centering_text_pos(str.c_str());
                 ImGui::Text("%s", str.c_str());
             }
             break;
@@ -583,6 +640,7 @@ private:
                 auto idx = imaging.ExposureECS;
                 auto val = imaging.ExposureECSValue;
                 auto val_f = val / 1000.0f;
+                if (center) centering_text_pos("123456789012");
                 ImGui::Text("[%d] %.2f", idx, val_f);
             }
             break;
@@ -591,6 +649,8 @@ private:
         default:
             ;
         }
+
+        ImGui::PopID();
     }
 
     void show_panel_shutter_mode()
@@ -630,14 +690,47 @@ private:
         }
 
         if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
-            if (state == CGICmd::ExposureShutterModeState_AUTO || state == CGICmd::ExposureShutterModeState_OFF) {
-                stat_main = em_State::MAIN;
-            } else {
-                stat_shutter = em_StateShutter::CONTROL;
-            }
+            stat_shutter = em_StateShutter::CONTROL;
+
         } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
             stat_main_bkup = stat_main;
             stat_main = em_State::LIVE_VIEW;
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_shutter_auto()
+    {
+        ImGui::PushID("SHUTTER_AUTO");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto &state = imaging.ExposureShutterModeState;
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("shutter_auto", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                {
+                    auto p = ImGui::GetCursorScreenPos();
+                    auto sz = ImGui::GetWindowSize();
+                    auto text_height = ImGui::GetTextLineHeightWithSpacing();
+                    auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height);
+                    ImGui::SetCursorScreenPos(p_center);
+                }
+                show_panel_shutter_mode_str(true);
+                show_panel_shutter_value(true);
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
         }
 
         ImGui::PopID();
@@ -774,6 +867,42 @@ private:
         ImGui::PopID();
     }
 
+    void show_panel_shutter_off()
+    {
+        ImGui::PushID("SHUTTER_OFF");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto &state = imaging.ExposureShutterModeState;
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("shutter_off", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                {
+                    auto p = ImGui::GetCursorScreenPos();
+                    auto sz = ImGui::GetWindowSize();
+                    auto text_height = ImGui::GetTextLineHeightWithSpacing();
+                    auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height);
+                    ImGui::SetCursorScreenPos(p_center);
+                }
+                show_panel_shutter_mode_str(true);
+                show_panel_shutter_value(true);
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::PopID();
+    }
+
     void show_panel_shutter_control()
     {
         ImGui::PushID("Shutter_Control");
@@ -801,18 +930,16 @@ private:
                 break;
 
             case CGICmd::ExposureShutterModeState_AUTO:
-                stat_shutter = em_StateShutter::MODE;
+                show_panel_shutter_auto();
                 break;
 
             case CGICmd::ExposureShutterModeState_OFF:
-                stat_shutter = em_StateShutter::MODE;
+                show_panel_shutter_off();
                 break;
 
             default:
                 stat_main = em_State::MAIN;
             }
-
-            // show_panel_shutter_value();
 
             if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
                 stat_main = em_State::MAIN;
@@ -909,6 +1036,8 @@ private:
     /////////////////////////////////////////////////////////////////
     void show_panel_live_view(GLsizei panel_width, bool display_info = true, bool texture_simple = false)
     {
+        ImGui::PushID("LIVE_VIEW");
+
         // if live view is OK?
         {
             proc_live_view->fetch();
@@ -957,10 +1086,14 @@ private:
         } else {
             show_panel_texture(tex_id, w, GLsizei(w / aspect), str_title.c_str(), 0, true, str_info);
         }
+
+        ImGui::PopID();
     }
 
     void show_panel_live_view_with_info()
     {
+        ImGui::PushID("LIVE_VIEW_WITH_INFO");
+
         if (ImGui::BeginChild("CHILD", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
         {
             ImVec2 p = ImGui::GetCursorScreenPos();
@@ -977,6 +1110,8 @@ private:
             ImGui::Text("%s", srt.c_str());
         }
         ImGui::EndChild();
+
+        ImGui::PopID();
     }
 
 
