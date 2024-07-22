@@ -82,7 +82,7 @@ void setup_imgui(GLFWwindow* window, const char *glsl_version)
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    // ImGui::StyleColorsClassic();
+    // ImGui::StyleColorsLight();
     // ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
