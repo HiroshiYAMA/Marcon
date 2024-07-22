@@ -104,11 +104,8 @@ private:
         auto &rs = rs_info.remote_server;
         show_panel_input_ip_address("IP address", rs.ip_address, 10 * 13.0f, "IPv4 adress"); ImGui::SameLine();
         show_panel_input_port_number("Port number", rs.port, 4 * 13.0f); ImGui::SameLine();
-        // ImGui::Checkbox("[SRT] Listener", &rs.is_srt_listener); ImGui::SameLine();
-        ImGui::Text("[SRT]:"); ImGui::SameLine();
-        show_panel_input_port_number("[SRT] Port number", rs.srt_port, 4 * 13.0f); ImGui::SameLine();
         if (ImGui::Button("Add")) {
-            if (rs.ip_address != "" && rs.port != "" && rs.srt_port != "") {
+            if (rs.ip_address != "" && rs.port != "") {
                 auto &key = rs.ip_address;
                 auto is_exist = remote_server_info_DB.contains(key);
                 if (!is_exist) {
@@ -128,8 +125,7 @@ private:
             ImGui::PushID(k.c_str());
 
             auto &rs = v.remote_server;
-            std::string str = rs.ip_address + ":" + rs.port
-                + " / [SRT]" + (rs.is_srt_listener ? "Listener" : "Caller") + ":" + rs.srt_port;
+            std::string str = rs.ip_address + ":" + rs.port + " / [SRT]" + (rs.is_srt_listener ? "Listener" : "Caller");
             if (ImGui::Button(str.c_str())) {
                 auto &gui_win_camera = v.handle;
                 if (!gui_win_camera) {
@@ -301,7 +297,7 @@ public:
         remote_server_info_DB = std::move(decltype(remote_server_info_DB){});
         remote_server_info = {};
         remote_server_info.remote_server.port = "80";
-        remote_server_info.remote_server.srt_port = "4201";
+        // remote_server_info.remote_server.srt_port = "4201";
 
         is_loop = true;
 

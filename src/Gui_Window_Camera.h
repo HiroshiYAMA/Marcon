@@ -1594,10 +1594,24 @@ public:
 
         case em_Camera_Connection_State::CONNECTED:
             // check_auth();
-            {
-                if (!cgi->is_auth()) {
-                    camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
-                    break;
+            if (!cgi->is_auth()) {
+                camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
+                break;
+            }
+
+            if (!thd_proc_live_view.joinable()) {
+                if (cgi->is_update_cmd_info()) {
+                    CGICmd::st_Srt srt = {};
+                    cgi->inquiry(srt);
+                    remote_server.srt_port = std::to_string(srt.SrtListenPort);
+
+                    proc_live_view.reset(new ProcLiveView(remote_server, tex_width, tex_height));
+                    if (proc_live_view && proc_live_view->is_running()) {
+                        std::thread thd_tmp{ [&]{ proc_live_view->run(); }};
+                        thd_proc_live_view = std::move(thd_tmp);
+                    } else {
+                        proc_live_view.reset();
+                    }
                 }
             }
 
@@ -1649,18 +1663,8 @@ public:
     {
         if (is_CONNECTED()) return false;
 
-        bool ret = false;
         bool ret_inq = false;
         bool ret_set = false;
-
-        if (!thd_proc_live_view.joinable()) {
-            proc_live_view.reset(new ProcLiveView(remote_server, tex_width, tex_height));
-            if (proc_live_view && proc_live_view->is_running()) {
-                std::thread thd_tmp{ [&]{ proc_live_view->run(); }};
-                thd_proc_live_view = std::move(thd_tmp);
-                ret = true;
-            }
-        }
 
         if (!thd_cgi_inq.joinable()) {
             cgi = std::make_unique<CGI>(remote_server.ip_address, stoi(remote_server.port), remote_server.username, remote_server.password);
@@ -1682,7 +1686,7 @@ public:
             }
         }
 
-        ret = (ret && ret_inq && ret_set);
+        auto ret = (ret_inq && ret_set);
 
         if (ret) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));   // TODO: wait event.

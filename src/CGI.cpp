@@ -71,6 +71,8 @@ inline auto conv_json_str2range = [](const njson& j, const char *key, CGICmd::st
     return ret;
 };
 
+
+
 // json <---> st_Imaging.
 // shutter.
 constexpr auto EXPOSURE_ANGLE = "ExposureAngle";
@@ -118,6 +120,39 @@ void from_json(const njson& j, CGICmd::st_Imaging& p) {
     conv_json_str2num(j, WHITE_BALANCE_COLOR_TEMP_CURRENT, p.WhiteBalanceColorTempCurrent);
     json_get_val(j, WHITE_BALANCE_MODE, p.WhiteBalanceMode);
     json_get_val(j, WHITE_BALANCE_GAIN_TEMP, p.WhiteBalanceGainTemp);
+}
+
+
+
+// json <---> st_Network.
+constexpr auto HTTP_PORT = "HttpPort";
+constexpr auto HOST_NAME = "Hostname";
+constexpr auto MAC_ADDRESS = "MacAddress";
+constexpr auto CAMERA_NAME = "CameraName";
+//
+void to_json(njson& j, const CGICmd::st_Network& p) {
+    j[HTTP_PORT] = std::to_string(p.HttpPort);
+    j[HOST_NAME] = p.Hostname;
+    j[MAC_ADDRESS] = p.MacAddress;
+    j[CAMERA_NAME] = p.CameraName;
+}
+void from_json(const njson& j, CGICmd::st_Network& p) {
+    conv_json_str2num(j, HTTP_PORT, p.HttpPort);
+    json_get_val(j, HOST_NAME, p.Hostname);
+    json_get_val(j, MAC_ADDRESS, p.MacAddress);
+    json_get_val(j, CAMERA_NAME, p.CameraName);
+}
+
+
+
+// json <---> st_Srt.
+constexpr auto SRT_LISTEN_PORT = "SrtListenPort";
+//
+void to_json(njson& j, const CGICmd::st_Srt& p) {
+    j[SRT_LISTEN_PORT] = std::to_string(p.SrtListenPort);
+}
+void from_json(const njson& j, CGICmd::st_Srt& p) {
+    conv_json_str2num(j, SRT_LISTEN_PORT, p.SrtListenPort);
 }
 
 }   // namespace CGICmd.

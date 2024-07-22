@@ -67,6 +67,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM( em_EnableDisable, {
 
 }   // namespace COMMON.
 
+
+
 /////////////////////////////////////////////////////////////////////
 // system.
 enum em_Power
@@ -127,6 +129,8 @@ public:
     )
 };
 
+
+
 /////////////////////////////////////////////////////////////////////
 // status.
 struct st_Status
@@ -142,6 +146,8 @@ public:
         TemperatureWarning
     )
 };
+
+
 
 /////////////////////////////////////////////////////////////////////
 // imaging.
@@ -239,6 +245,8 @@ struct st_Imaging
     em_WhiteBalanceGainTemp WhiteBalanceGainTemp;
 };
 
+
+
 /////////////////////////////////////////////////////////////////////
 // project.
 struct st_Project
@@ -257,8 +265,39 @@ public:
 
 
 
+/////////////////////////////////////////////////////////////////
+// network.
+struct st_Network
+{
+    static constexpr auto cmd = "network";
+
+    int HttpPort;
+    std::string Hostname;
+    std::string MacAddress;
+    std::string CameraName;
+};
+
+
+
+/////////////////////////////////////////////////////////////////
+// srt.
+struct st_Srt
+{
+    static constexpr auto cmd = "srt";
+
+    int SrtListenPort;
+};
+
+
+
 void to_json(njson& j, const CGICmd::st_Imaging& p);
 void from_json(const njson& j, CGICmd::st_Imaging& p);
+
+void to_json(njson& j, const CGICmd::st_Network& p);
+void from_json(const njson& j, CGICmd::st_Network& p);
+
+void to_json(njson& j, const CGICmd::st_Srt& p);
+void from_json(const njson& j, CGICmd::st_Srt& p);
 
 }   // namespace CGICmd.
 
@@ -278,6 +317,8 @@ private:
         CGICmd::st_Status status;
         CGICmd::st_Imaging imaging;
         CGICmd::st_Project project;
+        CGICmd::st_Network network;
+        CGICmd::st_Srt srt;
     };
 
     std::mutex mtx;
@@ -586,9 +627,12 @@ public:
             std::cout << "(" << s << ") : " << s_msg << std::endl;
         }
     }
+    auto &inquiry_system() { return cmd_info.system; }
     auto &inquiry_status() { return cmd_info.status; }
     auto &inquiry_imaging() { return cmd_info.imaging; }
     auto &inquiry_project() { return cmd_info.project; }
+    auto &inquiry_network() { return cmd_info.network; }
+    auto &inquiry_srt() { return cmd_info.srt; }
 
 
 
@@ -625,6 +669,8 @@ public:
                 inquiry(cmdi.status);
                 inquiry(cmdi.imaging);
                 inquiry(cmdi.project);
+                inquiry(cmdi.network);
+                inquiry(cmdi.srt);
             }
             catch(const httplib::StatusCode &s)
             {
