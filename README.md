@@ -13,6 +13,9 @@ git clone --recursive git@github.com:HiroshiYAMA/Marcon.git
 git submodule update --init --recursive
 ```
 
+## 必要なもの
+* OpenSSL ver.3
+
 ## ビルド & インストール
 ```bash
 mkdir -p build
