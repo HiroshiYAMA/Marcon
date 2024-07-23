@@ -1599,8 +1599,26 @@ public:
                 break;
             }
 
+            // Run Live View thread.
             if (!thd_proc_live_view.joinable()) {
                 if (cgi->is_update_cmd_info()) {
+                    // SRT-Listener ?
+                    CGICmd::st_Stream stream = {};
+                    cgi->inquiry(stream);
+                    if (stream.StreamMode != CGICmd::StreamMode_SRT_LISTENER) {
+                        cgi->set_stream_StreamMode(CGICmd::StreamMode_SRT_LISTENER);
+                        int retry_count = 6;
+                        do {
+                            cgi->inquiry(stream);
+                            retry_count--;
+                        } while (retry_count > 0 && stream.StreamMode != CGICmd::StreamMode_SRT_LISTENER);
+                        if (retry_count == 0) {
+                            is_window_opened = false;
+                            break;
+                        }
+                    }
+
+                    // get SRT port #.
                     CGICmd::st_Srt srt = {};
                     cgi->inquiry(srt);
                     remote_server.srt_port = std::to_string(srt.SrtListenPort);

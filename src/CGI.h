@@ -280,10 +280,82 @@ struct st_Network
 
 
 /////////////////////////////////////////////////////////////////
+// stream.
+enum em_StreamMode
+{
+    StreamMode_RTSP,
+    StreamMode_RTMP,
+    StreamMode_SRT_CALLER,
+    StreamMode_SRT_LISTENER,
+    StreamMode_NDI_HX,
+    StreamMode_OFF,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_StreamMode, {
+    {StreamMode_RTSP, "rtsp"},
+    {StreamMode_RTMP, "rtmp"},
+    {StreamMode_SRT_CALLER, "srt-caller"},
+    {StreamMode_SRT_LISTENER, "srt-listener"},
+    {StreamMode_NDI_HX, "ndi_hx"},
+    {StreamMode_OFF, "off"},
+})
+
+enum em_StreamStatus
+{
+    StreamStatus_INVALID,
+    StreamStatus_OFF,
+    StreamStatus_READY,
+    StreamStatus_READY_SSL,
+    StreamStatus_STREAMING,
+    StreamStatus_STREAMING_SSL,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_StreamStatus, {
+    {StreamStatus_INVALID, "invalid"},
+    {StreamStatus_OFF, "off"},
+    {StreamStatus_READY, "ready"},
+    {StreamStatus_READY_SSL, "ready-ssl"},
+    {StreamStatus_STREAMING, "streaming"},
+    {StreamStatus_STREAMING_SSL, "streaming-ssl"},
+})
+
+struct st_Stream
+{
+    static constexpr auto cmd = "stream";
+
+    em_StreamMode StreamMode;
+    em_StreamStatus StreamStatus;
+
+public:
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(
+        st_Stream,
+
+        StreamMode,
+        StreamStatus
+    )
+};
+
+
+
+/////////////////////////////////////////////////////////////////
 // srt.
+enum em_SrtEncryption
+{
+    SrtEncryption_NONE,
+    SrtEncryption_AES_128,
+    SrtEncryption_AES_256,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_SrtEncryption, {
+    {SrtEncryption_NONE, "none"},
+    {SrtEncryption_AES_128, "aes-128"},
+    {SrtEncryption_AES_256, "aes-256"},
+})
+
 struct st_Srt
 {
     static constexpr auto cmd = "srt";
+
+    em_SrtEncryption SrtEncryption;
+    std::string SrtPassphrase;
+    COMMON::em_TrueFalse SrtPassphraseUsed;
 
     int SrtListenPort;
 };
@@ -318,6 +390,7 @@ private:
         CGICmd::st_Imaging imaging;
         CGICmd::st_Project project;
         CGICmd::st_Network network;
+        CGICmd::st_Stream stream;
         CGICmd::st_Srt srt;
     };
 
@@ -390,6 +463,9 @@ public:
     void stop() { running = false; }
 
     bool is_auth() const { return auth; }
+
+    bool empty_cmd_msg_list() const { return cmd_msg_list->empty(); }
+    bool full_cmd_msg_list() const { return cmd_msg_list->full(); }
 
     std::tuple<double, double> get_lap_inq() { return { lap_cur_inq, lap_ave_inq }; }
     std::tuple<double, double> get_lap_set() { return { lap_cur_set, lap_ave_set }; }
@@ -518,7 +594,7 @@ public:
     // memory_A(T/T): /command/imaging.cgi?WhiteBalanceMode=memory_a&WhiteBalanceGainTemp=temp&WhiteBalanceTint=0
     // memory_A(R/B): /command/imaging.cgi?WhiteBalanceMode=memory_a&WhiteBalanceGainTemp=gain
     // preset:        /command/imaging.cgi?WhiteBalanceMode=preset
-    void set_imaging_WhiteBalanceModeState (CGICmd::em_WhiteBalanceModeState state)
+    void set_imaging_WhiteBalanceModeState(CGICmd::em_WhiteBalanceModeState state)
     {
         std::string msg;
         switch (state) {
@@ -578,6 +654,17 @@ public:
         default:
             mode = CGICmd::WhiteBalanceMode_ATW;
         }
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // stream.
+    void set_stream_StreamMode(CGICmd::em_StreamMode mode)
+    {
+        auto str = json_conv_enum2str(mode);
+        std::string msg = "StreamMode=" + str;
+        set_command<CGICmd::st_Stream>(msg);
     }
 
 
@@ -670,6 +757,7 @@ public:
                 inquiry(cmdi.imaging);
                 inquiry(cmdi.project);
                 inquiry(cmdi.network);
+                inquiry(cmdi.stream);
                 inquiry(cmdi.srt);
             }
             catch(const httplib::StatusCode &s)
@@ -707,8 +795,8 @@ public:
             auto ret = cv_cmd_msg.wait_for(lk, wait_time, [&]{ return is_update_cmd_msg_list.load(); });
             if (!ret) continue;
 
-            is_update_cmd_msg_list.store(false);
             auto msg = cmd_msg_list->Read();
+            is_update_cmd_msg_list.store(false);
             if (!msg.empty()) {
                 try
                 {

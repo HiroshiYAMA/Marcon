@@ -146,12 +146,24 @@ void from_json(const njson& j, CGICmd::st_Network& p) {
 
 
 // json <---> st_Srt.
+constexpr auto SRT_ENCRYPTION = "SrtEncryption";
+constexpr auto SRT_PASSPHRASE = "SrtPassphrase";
+constexpr auto SRT_PASSPHRASE_USED = "SrtPassphraseUsed";
+//
 constexpr auto SRT_LISTEN_PORT = "SrtListenPort";
 //
 void to_json(njson& j, const CGICmd::st_Srt& p) {
+    j[SRT_ENCRYPTION] = p.SrtEncryption;
+    j[SRT_PASSPHRASE] = p.SrtPassphrase;
+    j[SRT_PASSPHRASE_USED] = p.SrtPassphraseUsed;
+    //
     j[SRT_LISTEN_PORT] = std::to_string(p.SrtListenPort);
 }
 void from_json(const njson& j, CGICmd::st_Srt& p) {
+    json_get_val(j, SRT_ENCRYPTION, p.SrtEncryption);
+    json_get_val(j, SRT_PASSPHRASE, p.SrtPassphrase);
+    json_get_val(j, SRT_PASSPHRASE_USED, p.SrtPassphraseUsed);
+    //
     conv_json_str2num(j, SRT_LISTEN_PORT, p.SrtListenPort);
 }
 

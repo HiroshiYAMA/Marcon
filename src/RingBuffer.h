@@ -232,6 +232,9 @@ public:
         ;
     }
 
+    bool empty() const { return buffers.empty(); }
+    bool full() const { return buffers.size() == max_size; }
+
     T Read(bool latest = false)
     {
         std::lock_guard<std::mutex> lg(mtx);

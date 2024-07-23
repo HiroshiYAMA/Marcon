@@ -88,6 +88,13 @@ inline auto json_get_vector_val = [](auto &j, auto &key, auto &vec) -> void {
     for (auto &e : j_sub) vec.push_back(e.template get<std::remove_reference_t<decltype(vec[0])>>());
 };
 
+// convert enum -> std::string.
+inline auto json_conv_enum2str = [](auto val) -> std::string {
+    njson json = val;
+    std::string str = json.template get<std::string>();
+    return str;
+};
+
 template<typename T> T read_json_file(const std::string &filename)
 {
     auto p = fs::path{filename};
