@@ -612,7 +612,12 @@ private:
                 auto idx = imaging.ExposureExposureTime;
 
                 std::string str = "---";
+#if __cplusplus == 202002L  // C++20.
                 if (CGICmd::exposure_exposure_time.contains(frame_rate)) {
+#else
+                auto &vec = CGICmd::exposure_exposure_time;
+                if (std::find_if(vec.begin(), vec.end(), [&frame_rate](auto &e){ return e.first == frame_rate; }) != vec.end()) {
+#endif
                     auto &lst = CGICmd::exposure_exposure_time[frame_rate];
                     str = get_string_from_pair_list(lst, idx);
                 }
@@ -749,7 +754,12 @@ private:
                 {
                     auto &project = cgi->inquiry_project();
                     auto frame_rate = project.RecFormatFrequency;
+#if __cplusplus == 202002L  // C++20.
                     auto &lst = (CGICmd::exposure_exposure_time.contains(frame_rate))
+#else
+                    auto &vec = CGICmd::exposure_exposure_time;
+                    auto &lst = (std::find_if(vec.begin(), vec.end(), [&frame_rate](auto &e){ return e.first == frame_rate; }) != vec.end())
+#endif
                         ? CGICmd::exposure_exposure_time[frame_rate]
                         : CGICmd::exposure_exposure_time_5994p
                         ;

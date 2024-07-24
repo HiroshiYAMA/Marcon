@@ -107,7 +107,12 @@ private:
         if (ImGui::Button("Add")) {
             if (rs.ip_address != "" && rs.port != "") {
                 auto &key = rs.ip_address;
+#if __cplusplus == 202002L  // C++20.
                 auto is_exist = remote_server_info_DB.contains(key);
+#else
+                auto &vec = remote_server_info_DB;
+                auto is_exist = (std::find_if(vec.begin(), vec.end(), [&key](auto &e){ return e.first == key; }) != vec.end());
+#endif
                 if (!is_exist) {
                     rs_info.handle.reset();
                     remote_server_info_DB.emplace(key, std::move(rs_info));
