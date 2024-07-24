@@ -57,6 +57,12 @@ make install
 | V, curos DOWN | select item below |
 | X | go to MODE select panel |
 
+## Ubuntu のディスプレイ表示の回転
+時々、ディスプレイ表示が縦長なのがある。
+それを横長にするには、
+[ここの Web サイト](http://bluearth.cocolog-nifty.com/blog/2019/12/post-e5f4f1.html)
+を参考すると良い。
+
 ## テストプログラムたち
 test ディレクトリ以下に置いてある。
 * [cgi_test](./test/cgi_test/)
