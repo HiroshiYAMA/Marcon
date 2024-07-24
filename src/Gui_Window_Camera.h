@@ -1312,7 +1312,7 @@ private:
             ImGui::Text("%s", srt.c_str());
 
             ImGui::SetCursorScreenPos(p);
-            ImGui::InvisibleButton("##INVISIBULE_BUTTON", ImVec2(-1, -1));
+            ImGui::InvisibleButton("##INVISIBULE_BUTTON", ImVec2(-1, win_size.x * ( 9.0f / 16.0f)));
             auto is_hovered = ImGui::IsItemHovered();
             if (is_hovered && ImGui::IsMouseClicked(0)) {
                 stat_main_bkup = stat_main;
@@ -1532,9 +1532,7 @@ public:
                 stat_main = stat_main_bkup;
             }
 
-            ImGui::SetCursorScreenPos(p);
-            ImGui::InvisibleButton("##INVISIBULE_BUTTON", win_size);
-            auto is_hovered = ImGui::IsItemHovered();
+            auto is_hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
             if (is_hovered && ImGui::IsMouseClicked(0)) {
                 stat_main = stat_main_bkup;
             }
