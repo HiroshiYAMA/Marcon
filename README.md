@@ -19,6 +19,13 @@ git submodule update --init --recursive
 ダイナミックリンクライブラリとの不意な競合を避けるには
 スタティックリンクライブラリとしてビルドすると良い。
 
+```bash
+./Configure --prefix=/opt/openssl3 --openssldir=/usr/local/ssl3 zlib no-shared
+make -j$(nproc)
+make test
+sudo make install
+```
+
 ## ビルド & インストール
 ```bash
 mkdir -p build
