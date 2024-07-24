@@ -15,6 +15,9 @@ git submodule update --init --recursive
 
 ## 必要なもの
 * OpenSSL ver.3
+  * 結構なシステムにインストールされているであろう OpenSSL ver.1 系の
+ダイナミックリンクライブラリとの不意な競合を避けるには
+スタティックリンクライブラリとしてビルドすると良い。
 
 ## ビルド & インストール
 ```bash

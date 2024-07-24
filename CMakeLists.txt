@@ -121,7 +121,7 @@ message("OpenSSL libraries: ${OPENSSL_CRYPTO_LIBRARIES}")
 message("OpenSSL libraries: ${OPENSSL_SSL_LIBRARIES}")
 message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
 target_include_directories(${target} PUBLIC ${OPENSSL_INCLUDE_DIR})
-target_link_libraries(${target} ${OPENSSL_LIBRARIES})
+target_link_libraries(${target} ${OPENSSL_LIBRARIES} z)
 
 # cpp-httplib.
 set(CPP_HTTPLIB_INCLUDE_DIR "${EXTERNAL_DIR}/cpp-httplib")
