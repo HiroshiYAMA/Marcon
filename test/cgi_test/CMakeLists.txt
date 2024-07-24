@@ -34,6 +34,6 @@ add_executable(client Client.cpp)
 
 target_include_directories(server PUBLIC ${OPENSSL_INCLUDE_DIR} ${LOCAL_INCLUDE_PATH})
 target_include_directories(client PUBLIC ${OPENSSL_INCLUDE_DIR} ${LOCAL_INCLUDE_PATH})
-target_link_libraries(server ${OPENSSL_LIBRARIES} pthread)
-target_link_libraries(client ${OPENSSL_LIBRARIES} pthread)
+target_link_libraries(server ${OPENSSL_LIBRARIES} pthread dl z)
+target_link_libraries(client ${OPENSSL_LIBRARIES} pthread dl z)
 # target_compile_definitions(server HOGEHOGE)
