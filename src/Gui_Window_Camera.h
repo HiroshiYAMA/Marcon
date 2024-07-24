@@ -456,6 +456,14 @@ private:
                                 ImVec2 win_size = ImGui::GetWindowSize();
 
                                 show_panel_live_view(win_size.x / 4, false, true);
+
+                                ImGui::SetCursorScreenPos(p);
+                                ImGui::InvisibleButton("##INVISIBULE_BUTTON", ImVec2(win_size.x / 4, win_size.y / 2.8f));
+                                auto is_hovered = ImGui::IsItemHovered();
+                                if (is_hovered && ImGui::IsMouseClicked(0)) {
+                                    stat_main_bkup = stat_main;
+                                    stat_main = em_State::LIVE_VIEW;
+                                }
                             }
                         }
                         ImGui::EndTable();
@@ -1302,6 +1310,14 @@ private:
             ImGui::Text("Live View");
             ImGui::Text("%s", cgi_server.c_str());
             ImGui::Text("%s", srt.c_str());
+
+            ImGui::SetCursorScreenPos(p);
+            ImGui::InvisibleButton("##INVISIBULE_BUTTON", ImVec2(-1, -1));
+            auto is_hovered = ImGui::IsItemHovered();
+            if (is_hovered && ImGui::IsMouseClicked(0)) {
+                stat_main_bkup = stat_main;
+                stat_main = em_State::LIVE_VIEW;
+            }
         }
         ImGui::EndChild();
 
@@ -1507,9 +1523,19 @@ public:
         bool is_window_opened = true;
         ImGui::Begin(str, &is_window_opened, window_flags);
         {
+            auto p = ImGui::GetCursorScreenPos();
+            auto win_size = ImGui::GetWindowSize();
+
             show_panel_live_view(tex_width);
 
             if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+                stat_main = stat_main_bkup;
+            }
+
+            ImGui::SetCursorScreenPos(p);
+            ImGui::InvisibleButton("##INVISIBULE_BUTTON", win_size);
+            auto is_hovered = ImGui::IsItemHovered();
+            if (is_hovered && ImGui::IsMouseClicked(0)) {
                 stat_main = stat_main_bkup;
             }
         }
