@@ -269,10 +269,12 @@ private:
                 bool is_changed = false;
 
                 // centering.
+                constexpr auto btn_scale = 2.0f;
+                ImGui::SetWindowFontScale(btn_scale);
                 const auto text_size = ImGui::CalcTextSize("A");
                 const auto pad_frame = style.FramePadding;
                 const ImVec2 ar_size(text_size.x + pad_frame.x, text_size.y + pad_frame.y);
-                ImVec2 p_up(p.x + (win_size.x / 2) - (ar_size.x / 2) - pad_frame.x, p.y + 4.0f);
+                ImVec2 p_up(p.x + (win_size.x / 2) - (ar_size.x / 2) - pad_frame.x * btn_scale, p.y + 4.0f);
                 ImGui::SetCursorScreenPos(p_up);
                 ImGui::PushButtonRepeat(true);
                 if (ImGui::ArrowButton("##UP", ImGuiDir_Up)
@@ -283,6 +285,7 @@ private:
                     is_changed = true;
                 }
                 ImGui::PopButtonRepeat();
+                ImGui::SetWindowFontScale(1.0f);
 
                 ImVec2 p_list(p.x, p.y + (win_size.y * (1.0f - 0.5f) / 2));
                 ImGui::SetCursorScreenPos(p_list);
@@ -323,6 +326,7 @@ private:
                 ImGui::EndChild();
 
                 // centering.
+                ImGui::SetWindowFontScale(btn_scale);
                 ImVec2 p_down(p_up.x, win_size.y - ar_size.y + (0.0f - 4.0f));
                 ImGui::SetCursorScreenPos(p_down);
                 ImGui::PushButtonRepeat(true);
@@ -335,6 +339,7 @@ private:
                     is_changed = true;
                 }
                 ImGui::PopButtonRepeat();
+                ImGui::SetWindowFontScale(1.0f);
 
                 io.KeyRepeatDelay = key_delay_bkup;
                 io.KeyRepeatRate = key_rate_bkup;
