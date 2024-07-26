@@ -73,6 +73,7 @@ private:
     st_RemoteServerInfo remote_server_info;
 
     bool is_loop;
+    float mouse_running_for_QUIT;
 
     TinyTimer tt;
 
@@ -223,7 +224,7 @@ private:
         ImGui::PopID();
     }
 
-    void display_launcher_window()
+    bool display_launcher_window()
     {
         ImGuiStyle& style = ImGui::GetStyle();
         style.FrameRounding = 8.0f * vis_xscale;
@@ -247,7 +248,8 @@ private:
         ImGui::SetNextWindowPos(win_pos, ImGuiCond_Appearing);
         ImGui::SetNextWindowSize(win_size, ImGuiCond_Appearing);
 
-        ImGui::Begin("Launcher", NULL, window_flags);
+        bool is_opened = true;
+        ImGui::Begin("Launcher", &is_opened, window_flags);
         {
             // Menu.
             show_menu_control();
@@ -258,8 +260,31 @@ private:
             ImGui::Separator();
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+            // Quit by mouse action.
+            {
+                constexpr auto quit_cnt = 5;
+
+                if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                    auto &io = ImGui::GetIO();
+                    auto delta = io.MouseDelta;
+                    auto len = std::sqrt(std::pow(delta.x, 2.0f) + std::pow(delta.y, 2.0f));
+                    mouse_running_for_QUIT += len;
+                } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+                    auto win_size = ImGui::GetWindowSize();
+                    if (mouse_running_for_QUIT > win_size.x * quit_cnt) {
+                        is_opened = false;
+                    } else {
+                        mouse_running_for_QUIT = 0.0f;
+                    }
+                } else {
+                    mouse_running_for_QUIT = 0.0f;
+                }
+            }
         }
         ImGui::End();
+
+        return is_opened;
     }
 
 	// // ウィンドウのサイズ変更時の処理
@@ -305,6 +330,7 @@ public:
         // remote_server_info.remote_server.srt_port = "4201";
 
         is_loop = true;
+        mouse_running_for_QUIT = 0.0f;
 
         tt = {};
 
@@ -382,7 +408,7 @@ public:
 
             if (state == em_State::LANCHER) {
                 // display launcher window.
-                display_launcher_window();
+                is_loop = display_launcher_window();
 
             } else if (state == em_State::CAMERA_CONTROL) {
                 // display control window.
