@@ -425,6 +425,7 @@ public:
                     const auto &id = k;
                     if (gui_win_camera) {
                         auto ret = gui_win_camera->display_control_window(id);
+                        gui_win_camera->sync_remote_server(v.remote_server);
                         if (!ret) {
                             gui_win_camera->DISCONNECT();
                             gui_win_camera.reset();
@@ -488,14 +489,8 @@ public:
     // load remote server list file. (<- json).
     void load_file_remote_server_list(const std::string &filename)
     {
-        std::ifstream ifs(filename);
-        if (!ifs.is_open()) {
-            std::cout << "ERROR! can't open JSON file to read : (" << filename << ")" << std::endl;
-        } else {
-            njson js = {};
-            ifs >> js;
-            json2rsDB(js);
-        }
+        auto js = read_json_file(filename);
+        json2rsDB(js);
     }
 
     // save remote server list file. (-> json).
@@ -504,11 +499,6 @@ public:
         njson js = {};
         js = rsDB2json();
 
-        std::ofstream ofs(filename);
-        if (!ofs.is_open()) {
-            std::cout << "ERROR! can't open JSON file to write : (" << filename << ")" << std::endl;
-        } else {
-            ofs << std::setw(4) << js << std::endl;
-        }
+        write_json_file(filename, js);
     }
 };

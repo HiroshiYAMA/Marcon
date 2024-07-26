@@ -1906,4 +1906,8 @@ public:
         return true;
     }
 
+    void sync_remote_server(st_RemoteServer &rs)
+    {
+        rs = remote_server;
+    }
 };

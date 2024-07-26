@@ -134,6 +134,43 @@ template<typename T> T read_json_file(const std::string &filename)
     return data;
 }
 
+njson read_json_file(const std::string &filename)
+{
+    auto p = fs::path{filename};
+    auto ext = p.extension();
+    auto ext_str = ext.generic_string();
+    std::transform(ext_str.cbegin(), ext_str.cend(), ext_str.begin(), ::tolower);
+
+    njson json = {};
+
+    if (ext_str == ".json") {
+        std::ifstream ifs(filename);
+
+        if (!ifs.is_open()) {
+            std::cout << "ERROR! can't open JSON file to read : (" << filename << ")" << std::endl;
+            return {};
+        }
+        ifs >> json;
+
+    } else if (ext_str == ".dat" || ext_str == ".cbor") {
+        std::ifstream ifs(filename, std::ios::binary);
+        if (!ifs.is_open()) {
+            std::cout << "ERROR!! can't open DAT file to read : (" << filename << ")" << std::endl;
+            return {};
+        }
+        auto sz = fs::file_size(p);
+        std::vector<uint8_t> cbor(sz);
+        ifs.read(reinterpret_cast<char *>(cbor.data()), sz);
+        json = njson::from_cbor(cbor);
+
+    } else {
+        std::cout << "ERROR! not support file type to read: " << ext_str << "." << std::endl;
+        return {};
+    }
+
+    return json;
+}
+
 template<typename T> void write_json_file(const std::string &filename, const T &data)
 {
     auto p = fs::path{filename};
@@ -143,6 +180,36 @@ template<typename T> void write_json_file(const std::string &filename, const T &
 
     njson json = {};
     json = data;
+
+    if (ext_str == ".json") {
+        std::ofstream ofs(filename);
+        if (!ofs.is_open()) {
+            std::cout << "ERROR! can't open JSON file to write : (" << filename << ")" << std::endl;
+            return;
+        }
+        ofs << std::setw(4) << json << std::endl;
+
+    } else if (ext_str == ".dat" || ext_str == ".cbor") {
+        std::ofstream ofs(filename, std::ios::binary);
+        if (!ofs.is_open()) {
+            std::cout << "ERROR!! can't open DAT file to write : (" << filename << ")" << std::endl;
+            return;
+        }
+        auto cbor = njson::to_cbor(json);
+        ofs.write(reinterpret_cast<char *>(cbor.data()), cbor.size());
+
+    } else {
+        std::cout << "ERROR! not support file type to write : " << ext_str << "." << std::endl;
+        return;
+    }
+}
+
+void write_json_file(const std::string &filename, const njson &json)
+{
+    auto p = fs::path{filename};
+    auto ext = p.extension();
+    auto ext_str = ext.generic_string();
+    std::transform(ext_str.cbegin(), ext_str.cend(), ext_str.begin(), ::tolower);
 
     if (ext_str == ".json") {
         std::ofstream ofs(filename);
