@@ -380,7 +380,7 @@ private:
         {
             auto p = ImGui::GetCursorScreenPos();
             auto sz = ImGui::GetWindowSize();
-            float min_row_height = (sz.y - p.y - 10) / 3;
+            float min_row_height = (sz.y - p.y - 24) / 3;
 
             for (int row = 0; row < 3; row++)
             {
@@ -500,7 +500,7 @@ private:
                                 show_panel_live_view(win_size.x / 4, false, true);
 
                                 ImGui::SetCursorScreenPos(p);
-                                ImGui::InvisibleButton("##INVISIBULE_BUTTON", ImVec2(win_size.x / 4, win_size.y / 2.8f));
+                                ImGui::InvisibleButton("##INVISIBULE_BUTTON", ImVec2(win_size.x / 4, min_row_height));
                                 auto is_hovered = ImGui::IsItemHovered();
                                 if (is_hovered && ImGui::IsMouseClicked(0)) {
                                     stat_main_bkup = stat_main;
