@@ -30,22 +30,22 @@
 #include "gui_utils.h"
 #include "RemoteServer.h"
 
-// namespace {
+namespace {
 
-// constexpr auto app_json_file_path = "RemoteGui.json";
+constexpr auto filename_remote_server_List = "Marcon_remote_servers.json";
 
-// auto gen_setting_json_file = []() -> std::string {
-//     std::error_code ec;
-//     auto tmp_dir = fs::temp_directory_path(ec);
-//     auto home_dir = getenv("HOME");
+auto gen_filename_remote_server_list = []() -> std::string {
+    std::error_code ec;
+    auto tmp_dir = fs::temp_directory_path(ec);
+    auto home_dir = getenv("HOME");
 
-//     fs::path script_dir = home_dir ? fs::path{home_dir} : tmp_dir;
-//     auto json_path = script_dir.append(app_json_file_path);
+    fs::path script_dir = home_dir ? fs::path{home_dir} : tmp_dir;
+    auto json_path = script_dir.append(filename_remote_server_List);
 
-//     return json_path.string();
-// };
+    return json_path.string();
+};
 
-// }
+}
 
 class Gui_Window
 {
@@ -58,6 +58,13 @@ class Gui_Window
     {
         std::unique_ptr<Gui_Window_Camera> handle = nullptr;
         st_RemoteServer remote_server = {};
+
+    public:
+        NLOHMANN_DEFINE_TYPE_INTRUSIVE(
+            st_RemoteServerInfo,
+
+            remote_server
+        )
     };
 
 private:
@@ -458,50 +465,50 @@ public:
         }
     }
 
-    // // convert camera database -> json.
-    // njson camDB2json()
-    // {
-    //     njson js(camera_DB);
+    // convert remote server database -> json.
+    njson rsDB2json()
+    {
+        njson js(remote_server_info_DB);
 
-    //     return js;
-    // }
+        return js;
+    }
 
-    // // convert json -> camera database.
-    // void json2camDB(const njson &js)
-    // {
-    //     for (const auto &e : js.items()) {
-    //         const auto &id = e.key();
-    //         const auto &js_camDB = e.value();
-    //         st_CameraDataBase camDB;
-    //         from_json(js_camDB, camDB);
-    //         camera_DB[id] = camDB;
-    //     }
-    // }
+    // convert json -> remote server database.
+    void json2rsDB(const njson &js)
+    {
+        for (const auto &e : js.items()) {
+            const auto &id = e.key();
+            const auto &js_rsDB = e.value();
+            st_RemoteServerInfo rsDB;
+            from_json(js_rsDB, rsDB);
+            remote_server_info_DB[id] = std::move(rsDB);
+        }
+    }
 
-    // // load setting file. (<- json).
-    // void load_setting_file(const std::string &filename)
-    // {
-    //     std::ifstream ifs(filename);
-    //     if (!ifs.is_open()) {
-    //         std::cout << "ERROR! can't open JSON file to read : (" << filename << ")" << std::endl;
-    //     } else {
-    //         njson js = {};
-    //         ifs >> js;
-    //         json2camDB(js);
-    //     }
-    // }
+    // load remote server list file. (<- json).
+    void load_file_remote_server_list(const std::string &filename)
+    {
+        std::ifstream ifs(filename);
+        if (!ifs.is_open()) {
+            std::cout << "ERROR! can't open JSON file to read : (" << filename << ")" << std::endl;
+        } else {
+            njson js = {};
+            ifs >> js;
+            json2rsDB(js);
+        }
+    }
 
-    // // save setting file. (-> json).
-    // void save_setting_file(const std::string &filename)
-    // {
-    //     njson js = {};
-    //     js = camDB2json();
+    // save remote server list file. (-> json).
+    void save_file_remote_server_list(const std::string &filename)
+    {
+        njson js = {};
+        js = rsDB2json();
 
-    //     std::ofstream ofs(filename);
-    //     if (!ofs.is_open()) {
-    //         std::cout << "ERROR! can't open JSON file to write : (" << filename << ")" << std::endl;
-    //     } else {
-    //         ofs << std::setw(4) << js << std::endl;
-    //     }
-    // }
+        std::ofstream ofs(filename);
+        if (!ofs.is_open()) {
+            std::cout << "ERROR! can't open JSON file to write : (" << filename << ")" << std::endl;
+        } else {
+            ofs << std::setw(4) << js << std::endl;
+        }
+    }
 };

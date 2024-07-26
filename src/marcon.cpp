@@ -45,8 +45,15 @@ int main(int ac, char *av[])
     glfwSetWindowSize(window, win_w * vis_xscale, win_h * vis_xscale);
     auto gui_win = std::make_unique<Gui_Window>(window, win_w, win_h);
 
-    // Go!!
-    gui_win->Go();
+    if (gui_win) {
+        auto fn_rs_list = gen_filename_remote_server_list();
+        gui_win->load_file_remote_server_list(fn_rs_list);
+
+        // Go!!
+        gui_win->Go();
+
+        gui_win->save_file_remote_server_list(fn_rs_list);
+    }
 
     // Cleanup
     cleanup_imgui_glfw(window);

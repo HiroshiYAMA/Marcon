@@ -41,9 +41,6 @@ public:
         ip_address,
         port,
         username,
-        password,
-
-        is_srt_listener,
-        srt_port
+        password
     )
 };
