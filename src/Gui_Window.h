@@ -381,6 +381,7 @@ public:
                 // Quit program. key: Shift + Q.
                 if (ImGui::IsKeyPressed(ImGuiKey_Q) && ImGui::IsKeyDown(ImGuiKey_ModShift)) {
                     is_loop = false;
+                    break;
                 }
 
                 // switch full screen / window. key: Enter.
