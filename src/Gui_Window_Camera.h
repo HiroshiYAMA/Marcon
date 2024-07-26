@@ -359,11 +359,11 @@ private:
     /////////////////////////////////////////////////////////////////
     // Main control panel.
     /////////////////////////////////////////////////////////////////
-    void show_panel_main()
+    bool show_panel_main()
     {
         ImGui::PushID("Main");
 
-        stat_main_bkup = stat_main;
+        bool ret = true;
 
         auto tbl_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         auto cld_flags = ImGuiChildFlags_None;
@@ -389,37 +389,68 @@ private:
                         {
                             ImGui::TableNextRow();
 
+                            ///////////////////////////////////////////////////////////////////////
+                            // TOP LEFT.
+                            ///////////////////////////////////////////////////////////////////////
                             ImGui::TableSetColumnIndex(0);
                             {
                                 if (ImGui::BeginChild("main_top_left", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
-                                    if (ImGui::Button("FPS") || ImGui::IsKeyPressed(ImGuiKey_W, false)) {
+                                    auto p = ImGui::GetCursorScreenPos();
+
+                                    auto is_press = (ImGui::Button("FPS") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+
+                                    ImGui::SetCursorScreenPos(p);
+                                    is_press |= ImGui::InvisibleButton("##FPS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+
+                                    if (is_press) {
                                         stat_main = em_State::FPS;
                                     }
                                 }
                                 ImGui::EndChild();
                             }
 
+                            ///////////////////////////////////////////////////////////////////////
+                            // TOP CENTER.
+                            ///////////////////////////////////////////////////////////////////////
                             ImGui::TableSetColumnIndex(1);
                             {
                                 if (ImGui::BeginChild("main_top_center", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
-                                    if (ImGui::Button("ISO") || ImGui::IsKeyPressed(ImGuiKey_E, false)) {
+                                    auto p = ImGui::GetCursorScreenPos();
+
+                                    auto is_press = (ImGui::Button("ISO") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+
+                                    ImGui::SetCursorScreenPos(p);
+                                    is_press |= ImGui::InvisibleButton("##ISO", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+
+                                    if (is_press) {
                                         stat_main = em_State::ISO;
                                     }
                                 }
                                 ImGui::EndChild();
                             }
 
+                            ///////////////////////////////////////////////////////////////////////
+                            // TOP RIGHT.
+                            ///////////////////////////////////////////////////////////////////////
                             ImGui::TableSetColumnIndex(2);
                             {
                                 if (ImGui::BeginChild("main_top_right", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
-                                    if (ImGui::Button("Shutter") || ImGui::IsKeyPressed(ImGuiKey_R, false)) {
-                                        stat_main = em_State::SHUTTER;
-                                    }
+                                    auto p = ImGui::GetCursorScreenPos();
+
+                                    auto is_press = (ImGui::Button("Shutter") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+
                                     auto idx = imaging.ExposureShutterModeState;
                                     auto &vec = exposure_shutter_mode_state;
                                     std::string mode_str = get_string_from_pair_list(vec, idx);
                                     ImGui::Text("%s", mode_str.c_str());
                                     show_panel_shutter_value();
+
+                                    ImGui::SetCursorScreenPos(p);
+                                    is_press |= ImGui::InvisibleButton("##Shutter", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+
+                                    if (is_press) {
+                                        stat_main = em_State::SHUTTER;
+                                    }
                                 }
                                 ImGui::EndChild();
                             }
@@ -434,6 +465,9 @@ private:
                         {
                             ImGui::TableNextRow();
 
+                            ///////////////////////////////////////////////////////////////////////
+                            // MIDDLE LEFT.
+                            ///////////////////////////////////////////////////////////////////////
                             ImGui::TableSetColumnIndex(0);
                             {
                                 ImGui::SetWindowFontScale(0.75f);
@@ -450,6 +484,9 @@ private:
                                 show_panel_movie_rec();
                             }
 
+                            ///////////////////////////////////////////////////////////////////////
+                            // MIDDLE RIGHT.
+                            ///////////////////////////////////////////////////////////////////////
                             ImGui::TableSetColumnIndex(1);
                             {
                                 ImVec2 p = ImGui::GetCursorScreenPos();
@@ -476,37 +513,68 @@ private:
                         {
                             ImGui::TableNextRow();
 
+                            ///////////////////////////////////////////////////////////////////////
+                            // BOTTOM LEFT.
+                            ///////////////////////////////////////////////////////////////////////
                             ImGui::TableSetColumnIndex(0);
                             {
                                 if (ImGui::BeginChild("main_bottom_left", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
-                                    if (ImGui::Button("ND") || ImGui::IsKeyPressed(ImGuiKey_X, false)) {
+                                    auto p = ImGui::GetCursorScreenPos();
+
+                                    auto is_press = (ImGui::Button("ND") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+
+                                    ImGui::SetCursorScreenPos(p);
+                                    is_press |= ImGui::InvisibleButton("##ND", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+
+                                    if (is_press) {
                                         stat_main = em_State::ND;
                                     }
                                 }
                                 ImGui::EndChild();
                             }
 
+                            ///////////////////////////////////////////////////////////////////////
+                            // BOTTOM CENTER.
+                            ///////////////////////////////////////////////////////////////////////
                             ImGui::TableSetColumnIndex(1);
                             {
                                 if (ImGui::BeginChild("main_bottom_center", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
-                                    if (ImGui::Button("IRIS") || ImGui::IsKeyPressed(ImGuiKey_C, false)) {
+                                    auto p = ImGui::GetCursorScreenPos();
+
+                                    auto is_press = (ImGui::Button("IRIS") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+
+                                    ImGui::SetCursorScreenPos(p);
+                                    is_press |= ImGui::InvisibleButton("##IRIS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+
+                                    if (is_press) {
                                         stat_main = em_State::IRIS;
                                     }
                                 }
                                 ImGui::EndChild();
                             }
 
+                            ///////////////////////////////////////////////////////////////////////
+                            // BOTTOM RIGHT.
+                            ///////////////////////////////////////////////////////////////////////
                             ImGui::TableSetColumnIndex(2);
                             {
                                 if (ImGui::BeginChild("main_bottom_right", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
-                                    if (ImGui::Button("WB") || ImGui::IsKeyPressed(ImGuiKey_V, false)) {
-                                        stat_main = em_State::WHITE_BALANCE;
-                                    }
+                                    auto p = ImGui::GetCursorScreenPos();
+
+                                    auto is_press = (ImGui::Button("WB") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+
                                     auto idx = cgi->get_wb_mode_state();
                                     auto &vec = white_balance_mode_state;
                                     std::string mode_str = get_string_from_pair_list(vec, idx);
                                     ImGui::Text("%s", mode_str.c_str());
                                     show_panel_wb_value();
+
+                                    ImGui::SetCursorScreenPos(p);
+                                    is_press |= ImGui::InvisibleButton("##WB", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+
+                                    if (is_press) {
+                                        stat_main = em_State::WHITE_BALANCE;
+                                    }
                                 }
                                 ImGui::EndChild();
                             }
@@ -518,7 +586,21 @@ private:
             ImGui::EndTable();
         }
 
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            ret = false;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+        if (is_drag_left) {
+            ret = false;
+        }
+
         ImGui::PopID();
+
+        return ret;
     }
 
 
@@ -559,6 +641,14 @@ private:
             stat_main = em_State::LIVE_VIEW;
         }
 
+        auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+        auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
+        if (is_drag_left) {
+            stat_main = em_State::MAIN;
+        } else if (is_drag_right) {
+            ;
+        }
+
         ImGui::PopID();
     }
 
@@ -582,6 +672,14 @@ private:
         } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
             stat_main_bkup = stat_main;
             stat_main = em_State::LIVE_VIEW;
+        }
+
+        auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+        auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
+        if (is_drag_left) {
+            stat_main = em_State::MAIN;
+        } else if (is_drag_right) {
+            ;
         }
 
         ImGui::PopID();
@@ -705,6 +803,11 @@ private:
         } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
             stat_main_bkup = stat_main;
             stat_main = em_State::LIVE_VIEW;
+        }
+
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+        if (is_drag_left) {
+            stat_shutter = em_StateShutter::CONTROL;
         }
 
         ImGui::PopID();
@@ -955,6 +1058,14 @@ private:
                 stat_main_bkup = stat_main;
                 stat_main = em_State::LIVE_VIEW;
             }
+
+            auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+            auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
+            if (is_drag_left) {
+                stat_main = em_State::MAIN;
+            } else if (is_drag_right) {
+                stat_shutter = em_StateShutter::MODE;
+            }
         }
 
         ImGui::PopID();
@@ -1055,6 +1166,11 @@ private:
         } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
             stat_main_bkup = stat_main;
             stat_main = em_State::LIVE_VIEW;
+        }
+
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+        if (is_drag_left) {
+            stat_wb = em_StateWhiteBalance::CONTROL;
         }
 
         ImGui::PopID();
@@ -1176,6 +1292,14 @@ private:
                 stat_main_bkup = stat_main;
                 stat_main = em_State::LIVE_VIEW;
             }
+
+            auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+            auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
+            if (is_drag_left) {
+                stat_main = em_State::MAIN;
+            } else if (is_drag_right) {
+                stat_wb = em_StateWhiteBalance::MODE;
+            }
         }
 
         ImGui::PopID();
@@ -1203,6 +1327,14 @@ private:
             stat_main = em_State::LIVE_VIEW;
         }
 
+        auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+        auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
+        if (is_drag_left) {
+            stat_main = em_State::MAIN;
+        } else if (is_drag_right) {
+            ;
+        }
+
         ImGui::PopID();
     }
 
@@ -1226,6 +1358,14 @@ private:
         } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
             stat_main_bkup = stat_main;
             stat_main = em_State::LIVE_VIEW;
+        }
+
+        auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+        auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
+        if (is_drag_left) {
+            stat_main = em_State::MAIN;
+        } else if (is_drag_right) {
+            ;
         }
 
         ImGui::PopID();
@@ -1314,7 +1454,7 @@ private:
             ImGui::SetCursorScreenPos(p);
             ImGui::InvisibleButton("##INVISIBULE_BUTTON", ImVec2(-1, win_size.x * ( 9.0f / 16.0f)));
             auto is_hovered = ImGui::IsItemHovered();
-            if (is_hovered && ImGui::IsMouseClicked(0)) {
+            if (is_hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 stat_main_bkup = stat_main;
                 stat_main = em_State::LIVE_VIEW;
             }
@@ -1441,15 +1581,7 @@ public:
         {
             switch (stat_main) {
             case em_State::MAIN:
-                {
-                    show_panel_main();
-
-                    if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
-                        stat_main = em_State::LIVE_VIEW;
-                    } else if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-                        is_window_opened = false;
-                    }
-                }
+                is_window_opened = show_panel_main();
                 break;
             case em_State::SHUTTER:
                 show_panel_shutter_control();
@@ -1533,7 +1665,7 @@ public:
             }
 
             auto is_hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
-            if (is_hovered && ImGui::IsMouseClicked(0)) {
+            if (is_hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
                 stat_main = stat_main_bkup;
             }
         }
@@ -1606,6 +1738,12 @@ public:
         ImGui::End();
 
         if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
+            is_window_opened = false;
+        }
+
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+        if (is_drag_left) {
             camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
             is_window_opened = false;
         }

@@ -103,6 +103,45 @@ extern void display_texture(GLuint texID, GLsizei width, GLsizei height, std::st
     bool mouse_through = false, bool orientation_flag = false, bool v_flip_flag = false,
     const std::vector<std::string> info_str = {});
 
+
+inline auto get_mouse_drag_delta = [](ImGuiMouseButton button) -> ImVec2 {
+    ImVec2 delta(0, 0);
+
+    if (ImGui::IsMouseDragging(button)) {
+        auto &io = ImGui::GetIO();
+        ImGui::GetForegroundDrawList()->AddLine(io.MouseClickedPos[button], io.MousePos, ImGui::GetColorU32(ImGuiCol_Button), 4.0f);
+    } else if (ImGui::IsMouseReleased(button)) {
+        delta = ImGui::GetMouseDragDelta(button);
+    }
+
+    return delta;
+};
+
+inline auto is_mouse_drag_to_left = [](ImGuiMouseButton button) -> std::tuple<bool, ImVec2> {
+    bool ret = false;
+
+    auto mouse_delta = get_mouse_drag_delta(button);
+    auto win_size = ImGui::GetWindowSize();
+    if (mouse_delta.x < -win_size.x / 2) {
+        ret = true;
+    }
+
+    return { ret, mouse_delta };
+};
+
+inline auto is_mouse_drag_to_right = [](ImGuiMouseButton button) -> std::tuple<bool, ImVec2> {
+    bool ret = false;
+
+    auto mouse_delta = get_mouse_drag_delta(button);
+    auto win_size = ImGui::GetWindowSize();
+    if (mouse_delta.x > win_size.x / 2) {
+        ret = true;
+    }
+
+    return { ret, mouse_delta };
+};
+
+
 // ボタンの色(In-Active, Hovered, Active)を設定する //
 extern void set_style_color(float hue, float sat, float val);
 extern void set_style_color(float hue);
