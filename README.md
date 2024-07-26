@@ -67,6 +67,19 @@ make install
 | V, curos DOWN | select item below |
 | X | go to MODE select panel |
 
+## マウス/タッチ操作
+### 押せそうなボタンっぽい箇所
+押すとおおよそ期待どおりの動作をする。
+
+### ESC キーの代わり
+右から左に画面いっぱいにドラッグすると ESC キーと同じ挙動をする。  
+**Left <-- Right**
+
+### (Camera Control パネル) X キーの代わり
+左から右に画面いっぱいにドラッグすると X キーと同じ挙動をする。  
+(go to MODE select panel)  
+**Left --> Right**
+
 ## Ubuntu のディスプレイ表示の回転
 時々、ディスプレイ表示が縦長なのがある。
 それを横長にするには、
