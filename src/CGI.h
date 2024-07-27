@@ -65,6 +65,16 @@ NLOHMANN_JSON_SERIALIZE_ENUM( em_EnableDisable, {
     {DISPLAY_ONLY, "display_only"},
 })
 
+enum em_LowHigh
+{
+    LOW,
+    HIGH,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_LowHigh, {
+    {LOW, "low"},
+    {HIGH, "high"},
+})
+
 }   // namespace COMMON.
 
 
@@ -210,6 +220,37 @@ enum class em_WhiteBalanceModeState
     INVALID,
 };
 
+/////////////////////////////////////////////////////////////////
+// ISO.
+enum em_ExposureBaseISO
+{
+    ExposureBaseISO_ISO800,
+    ExposureBaseISO_ISO12800,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_ExposureBaseISO, {
+    {ExposureBaseISO_ISO800, "iso800"},
+    {ExposureBaseISO_ISO12800, "iso12800"},
+})
+
+enum em_ExposureISOGainMode
+{
+    ExposureISOGainMode_ISO,
+    ExposureISOGainMode_GAIN,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_ExposureISOGainMode, {
+    {ExposureISOGainMode_ISO, "iso"},
+    {ExposureISOGainMode_GAIN, "gain"},
+})
+
+enum class em_ISOModeState
+{
+    GAIN,
+    ISO,
+    CINE_EI_QUITCK,
+    CINE_EI,
+    INVALID,
+};
+
 
 
 struct st_Range
@@ -243,6 +284,20 @@ struct st_Imaging
 
     em_WhiteBalanceMode WhiteBalanceMode;
     em_WhiteBalanceGainTemp WhiteBalanceGainTemp;
+
+    /////////////////////////////////////////////////////////////////
+    // ISO.
+    COMMON::em_OnOff ExposureAGCEnable;
+    em_ExposureBaseISO ExposureBaseISO;
+    COMMON::em_EnableDisable ExposureBaseISOPmt;
+    COMMON::em_LowHigh ExposureBaseSensitivity;
+    int ExposureExposureIndex;
+    COMMON::em_EnableDisable ExposureExposureIndexPmt;
+    int ExposureGain;
+    int ExposureGainTemporary;
+    int ExposureISO;
+    int ExposureISOTemporary;
+    em_ExposureISOGainMode ExposureISOGainMode;
 };
 
 
@@ -654,6 +709,81 @@ public:
         default:
             mode = CGICmd::WhiteBalanceMode_ATW;
         }
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // ISO.
+    void set_imaging_ExposureAGCEnable(CGICmd::COMMON::em_OnOff val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "ExposureAGCEnable=" + str;
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_ExposureBaseSensitivity(CGICmd::COMMON::em_LowHigh val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "ExposureBaseSensitivity=" + str;
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_ExposureGain(int val)
+    {
+        std::string msg;
+        msg = "ExposureGain=" + std::to_string(val);
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_ExposureBaseISO(CGICmd::em_ExposureBaseISO val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "ExposureBaseISO=" + str;
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_ExposureISO(int val)
+    {
+        std::string msg;
+        msg = "ExposureISO=" + std::to_string(val);
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_ExposureExposureIndex(int val)
+    {
+        std::string msg;
+        msg = "ExposureExposureIndex=" + std::to_string(val);
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    CGICmd::em_ISOModeState get_iso_mode_state() const
+    {
+        using state_t = CGICmd::em_ISOModeState;
+        state_t state = state_t::INVALID;
+
+        auto idx_pmt = cmd_info.imaging.ExposureExposureIndexPmt;   // Cine EI ?
+        auto iso_pmt = cmd_info.imaging.ExposureBaseISOPmt;         // Cine EI / Cine EI Quick ?
+        auto iso_gain = cmd_info.imaging.ExposureISOGainMode;       // ISO / Gain ?
+
+        if (idx_pmt == CGICmd::COMMON::ENABLE) {
+            if (iso_pmt == CGICmd::COMMON::ENABLE) {
+                state = state_t::CINE_EI;
+            } else if (iso_pmt == CGICmd::COMMON::DISPLAY_ONLY) {
+                state = state_t::CINE_EI_QUITCK;
+            }
+        } else {
+            if (iso_gain == CGICmd::ExposureISOGainMode_ISO) {
+                state = state_t::ISO;
+            } else {
+                state = state_t::GAIN;
+            }
+        }
+
+        return state;
     }
 
 

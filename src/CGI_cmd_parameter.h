@@ -42,4 +42,15 @@ extern angle_list exposure_angle;
 using color_temp_list = shutter_list;
 extern color_temp_list white_balance_color_temp;
 
+using iso_list = shutter_list;
+extern iso_list exposure_iso;
+
+using gain_list = shutter_list;
+extern gain_list exposure_gain;
+
+using EI_list = shutter_list;
+extern EI_list exposure_exposure_index_iso800;
+extern EI_list exposure_exposure_index_iso12800;
+extern std::unordered_map<std::string, EI_list> exposure_exposure_index;
+
 }   // namespace CGICmd

@@ -88,6 +88,18 @@ constexpr auto WHITE_BALANCE_COLOR_TEMP = "WhiteBalanceColorTemp";
 constexpr auto WHITE_BALANCE_COLOR_TEMP_CURRENT = "WhiteBalanceColorTempCurrent";
 constexpr auto WHITE_BALANCE_MODE = "WhiteBalanceMode";
 constexpr auto WHITE_BALANCE_GAIN_TEMP = "WhiteBalanceGainTemp";
+// ISO.
+constexpr auto EXPOSURE_AGC_ENABLE = "ExposureAGCEnable";
+constexpr auto EXPOSURE_BASE_ISO = "ExposureBaseISO";
+constexpr auto EXPOSURE_BASE_ISO_PMT = "ExposureBaseISOPmt";
+constexpr auto EXPOSURE_BASE_SENSITIVITY = "ExposureBaseSensitivity";
+constexpr auto EXPOSURE_EXPOSURE_INDEX = "ExposureExposureIndex";
+constexpr auto EXPOSURE_EXPOSURE_INDEX_PMT = "ExposureExposureIndexPmt";
+constexpr auto EXPOSURE_GAIN = "ExposureGain";
+constexpr auto EXPOSURE_GAIN_TEMPORARY = "ExposureGainTemporary";
+constexpr auto EXPOSURE_ISO = "ExposureISO";
+constexpr auto EXPOSURE_ISO_TEMPORARY = "ExposureISOTemporary";
+constexpr auto EXPOSURE_ISO_GAIN_MODE = "ExposureISOGainMode";
 //
 void to_json(njson& j, const CGICmd::st_Imaging& p) {
     // shutter.
@@ -104,6 +116,18 @@ void to_json(njson& j, const CGICmd::st_Imaging& p) {
     j[WHITE_BALANCE_COLOR_TEMP_CURRENT] = std::to_string(p.WhiteBalanceColorTempCurrent);
     j[WHITE_BALANCE_MODE] = p.WhiteBalanceMode;
     j[WHITE_BALANCE_GAIN_TEMP] = p.WhiteBalanceGainTemp;
+    // ISO.
+    j[EXPOSURE_AGC_ENABLE] = p.ExposureAGCEnable;
+    j[EXPOSURE_BASE_ISO] = p.ExposureBaseISO;
+    j[EXPOSURE_BASE_ISO_PMT] = p.ExposureBaseISOPmt;
+    j[EXPOSURE_BASE_SENSITIVITY] = p.ExposureBaseSensitivity;
+    j[EXPOSURE_EXPOSURE_INDEX] = std::to_string(p.ExposureExposureIndex);
+    j[EXPOSURE_EXPOSURE_INDEX_PMT] = p.ExposureExposureIndexPmt;
+    j[EXPOSURE_GAIN] = std::to_string(p.ExposureGain);
+    j[EXPOSURE_GAIN_TEMPORARY] = std::to_string(p.ExposureGainTemporary);
+    j[EXPOSURE_ISO] = std::to_string(p.ExposureISO);
+    j[EXPOSURE_ISO_TEMPORARY] = std::to_string(p.ExposureISOTemporary);
+    j[EXPOSURE_ISO_GAIN_MODE] = p.ExposureISOGainMode;
 }
 void from_json(const njson& j, CGICmd::st_Imaging& p) {
     // shutter.
@@ -120,6 +144,18 @@ void from_json(const njson& j, CGICmd::st_Imaging& p) {
     conv_json_str2num(j, WHITE_BALANCE_COLOR_TEMP_CURRENT, p.WhiteBalanceColorTempCurrent);
     json_get_val(j, WHITE_BALANCE_MODE, p.WhiteBalanceMode);
     json_get_val(j, WHITE_BALANCE_GAIN_TEMP, p.WhiteBalanceGainTemp);
+    // ISO.
+    json_get_val(j, EXPOSURE_AGC_ENABLE, p.ExposureAGCEnable);
+    json_get_val(j, EXPOSURE_BASE_ISO, p.ExposureBaseISO);
+    json_get_val(j, EXPOSURE_BASE_ISO_PMT, p.ExposureBaseISOPmt);
+    json_get_val(j, EXPOSURE_BASE_SENSITIVITY, p.ExposureBaseSensitivity);
+    conv_json_str2num(j, EXPOSURE_EXPOSURE_INDEX, p.ExposureExposureIndex);
+    json_get_val(j, EXPOSURE_EXPOSURE_INDEX_PMT, p.ExposureExposureIndexPmt);
+    conv_json_str2num(j, EXPOSURE_GAIN, p.ExposureGain);
+    conv_json_str2num(j, EXPOSURE_GAIN_TEMPORARY, p.ExposureGainTemporary);
+    conv_json_str2num(j, EXPOSURE_ISO, p.ExposureISO);
+    conv_json_str2num(j, EXPOSURE_ISO_TEMPORARY, p.ExposureISOTemporary);
+    json_get_val(j, EXPOSURE_ISO_GAIN_MODE, p.ExposureISOGainMode);
 }
 
 

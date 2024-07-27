@@ -88,7 +88,13 @@ public:
         CONTROL,
     };
 
-    enum class em_StateISO {};
+    enum class em_StateISO {
+        MODE_AUTO_MANUAL,
+        MODE_BASE_SENSITIVITY,
+        MODE_BASE_ISO = MODE_BASE_SENSITIVITY,
+        CONTROL,
+    };
+
     enum class em_StateIRIS {};
     enum class em_StateND {};
     enum class em_StateFPS {};
@@ -107,6 +113,28 @@ private:
         {CGICmd::em_WhiteBalanceModeState::MANUAL, "Manual"},
     };
 
+    const std::list<std::pair<CGICmd::em_ISOModeState, std::string>> iso_mode_state = {
+        {CGICmd::em_ISOModeState::GAIN, "Gain"},
+        {CGICmd::em_ISOModeState::ISO, "ISO"},
+        {CGICmd::em_ISOModeState::CINE_EI_QUITCK, "Cine EI Quick"},
+        {CGICmd::em_ISOModeState::CINE_EI, "Cine EI"},
+    };
+
+    const std::list<std::pair<CGICmd::COMMON::em_OnOff, std::string>> iso_agc_on_off = {
+        {CGICmd::COMMON::ON, "AGC"},
+        {CGICmd::COMMON::OFF, "Manual"},
+    };
+
+    const std::list<std::pair<CGICmd::COMMON::em_LowHigh, std::string>> iso_base_sensitivity = {
+        {CGICmd::COMMON::LOW, "SDR"},
+        {CGICmd::COMMON::HIGH, "HDR"},
+    };
+
+    const std::list<std::pair<CGICmd::em_ExposureBaseISO, std::string>> iso_base_iso = {
+        {CGICmd::ExposureBaseISO_ISO800, "ISO 800"},
+        {CGICmd::ExposureBaseISO_ISO12800, "ISO 12800"},
+    };
+
     st_RemoteServer remote_server = {};
 
     em_State stat_main = em_State::MAIN;
@@ -119,6 +147,10 @@ private:
     // white balance.
     em_StateWhiteBalance stat_wb = em_StateWhiteBalance::CONTROL;
     CGICmd::em_WhiteBalanceModeState wb_mode_state_bkup = CGICmd::em_WhiteBalanceModeState::AUTO;
+
+    // ISO.
+    em_StateISO stat_iso = em_StateISO::CONTROL;
+    CGICmd::em_ISOModeState iso_mode_state_bkup = CGICmd::em_ISOModeState::GAIN;
 
     // cudaStream_t m_cuda_stream = NULL;
 
@@ -219,6 +251,29 @@ private:
         ImGui::EndChild();
         ImGui::SetCursorScreenPos(p_center);
     }
+
+#if 0   // TODO: something's wrong.
+    void centering_text_pos_v(int row_offset = 1)
+    {
+        static std::atomic<uint64_t> id(0);
+
+        std::string id_str = "centering_text_pos_v";
+        auto id_tmp = id.load();
+        id_str += std::to_string(id_tmp);
+        id.store(id_tmp++);
+
+        ImVec2 p_center;
+        if (ImGui::BeginChild(id_str.c_str(), ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+        {
+            auto p = ImGui::GetCursorScreenPos();
+            auto sz = ImGui::GetWindowSize();
+            auto text_height = ImGui::GetTextLineHeightWithSpacing();
+            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * row_offset);
+        }
+        ImGui::EndChild();
+        ImGui::SetCursorScreenPos(p_center);
+    }
+#endif
 
     template<typename S, typename V> void show_panel_state_mode_str(S state, const V &vec, bool center = false)
     {
@@ -361,7 +416,7 @@ private:
 
     void show_panel_text_select_mode()
     {
-        if (ImGui::BeginChild("CHILD", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+        if (ImGui::BeginChild("CHILD text_select_mode", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
         {
             ImVec2 p = ImGui::GetCursorScreenPos();
             ImVec2 win_size = ImGui::GetWindowSize();
@@ -380,6 +435,59 @@ private:
             ImGui::SetCursorScreenPos(p_down);
             auto col = (ImVec4)ImColor::HSV(0.75f / 7.0f, 1.0f, 1.0f);
             ImGui::TextColored(col, "%s", str);
+        }
+        ImGui::EndChild();
+    }
+
+    void show_panel_text_select_mode_right_down()
+    {
+        if (ImGui::BeginChild("CHILD text_select_mode_right_down", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+        {
+            ImVec2 p = ImGui::GetCursorScreenPos();
+            ImVec2 win_size = ImGui::GetWindowSize();
+
+            auto &io = ImGui::GetIO();
+            auto &style = ImGui::GetStyle();
+
+            // centering.
+            constexpr auto str = "Select Mode --\\";
+            const auto text_size = ImGui::CalcTextSize(str);
+            const auto pad_frame = style.FramePadding;
+            const ImVec2 ar_size(text_size.x + pad_frame.x, text_size.y + pad_frame.y);
+            ImVec2 p_up(p.x + (win_size.x / 2) - (ar_size.x / 2) - pad_frame.x, p.y + 4.0f);
+            ImGui::SetCursorScreenPos(p_up);
+            auto col = (ImVec4)ImColor::HSV(0.75f / 7.0f, 1.0f, 1.0f);
+            ImGui::TextColored(col, "%s", str);
+        }
+        ImGui::EndChild();
+    }
+
+    void show_panel_text_select_mode_right_up_down()
+    {
+        if (ImGui::BeginChild("CHILD text_select_mode_right_up_down", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+        {
+            ImVec2 p = ImGui::GetCursorScreenPos();
+            ImVec2 win_size = ImGui::GetWindowSize();
+
+            auto &io = ImGui::GetIO();
+            auto &style = ImGui::GetStyle();
+            const auto pad_frame = style.FramePadding;
+
+            // centering.
+            auto put_text = [&](const char *str, bool is_top) -> void {
+                const auto text_size = ImGui::CalcTextSize(str);
+                const ImVec2 ar_size(text_size.x + pad_frame.x, text_size.y + pad_frame.y);
+                ImVec2 p_top(p.x + (win_size.x / 2) - (ar_size.x / 2) - pad_frame.x, p.y + 4.0f);
+                ImVec2 p_btm(p.x + (win_size.x / 2) - (ar_size.x / 2) - pad_frame.x, win_size.y - ar_size.y + (0.0f - 4.0f));
+                auto p_center = is_top ? p_top : p_btm;
+                ImGui::SetCursorScreenPos(p_center);
+                auto col = (ImVec4)ImColor::HSV(0.75f / 7.0f, 1.0f, 1.0f);
+                ImGui::TextColored(col, "%s", str);
+            };
+
+            put_text("Select Mode --\\", true);
+
+            put_text("Select Mode --/", false);
         }
         ImGui::EndChild();
     }
@@ -427,7 +535,7 @@ private:
                                 if (ImGui::BeginChild("main_top_left", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("FPS") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+                                    auto is_press = (ImGui::Button("FPS") || ImGui::IsKeyPressed(ImGuiKey_W, false));
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##FPS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -447,7 +555,22 @@ private:
                                 if (ImGui::BeginChild("main_top_center", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("ISO") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+                                    auto is_press = (ImGui::Button("ISO") || ImGui::IsKeyPressed(ImGuiKey_E, false));
+
+                                    show_panel_iso_mode_str();
+
+                                    auto &imaging = cgi->inquiry_imaging();
+                                    auto is_agc = imaging.ExposureAGCEnable == CGICmd::COMMON::ON;
+                                    if (is_agc) show_panel_iso_agc_str();
+
+                                    auto state = cgi->get_iso_mode_state();
+                                    if (state == CGICmd::em_ISOModeState::GAIN) {
+                                        show_panel_iso_base_sensitivity_str();
+                                    } else if (state != CGICmd::em_ISOModeState::INVALID) {
+                                        show_panel_iso_base_iso_str();
+                                    }
+
+                                    show_panel_iso_value();
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##ISO", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -469,10 +592,7 @@ private:
 
                                     auto is_press = (ImGui::Button("Shutter") || ImGui::IsKeyPressed(ImGuiKey_R, false));
 
-                                    auto idx = imaging.ExposureShutterModeState;
-                                    auto &vec = exposure_shutter_mode_state;
-                                    std::string mode_str = get_string_from_pair_list(vec, idx);
-                                    ImGui::Text("%s", mode_str.c_str());
+                                    show_panel_shutter_mode_str();
                                     show_panel_shutter_value();
 
                                     ImGui::SetCursorScreenPos(p);
@@ -551,7 +671,7 @@ private:
                                 if (ImGui::BeginChild("main_bottom_left", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("ND") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+                                    auto is_press = (ImGui::Button("ND") || ImGui::IsKeyPressed(ImGuiKey_X, false));
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##ND", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -571,7 +691,7 @@ private:
                                 if (ImGui::BeginChild("main_bottom_center", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("IRIS") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+                                    auto is_press = (ImGui::Button("IRIS") || ImGui::IsKeyPressed(ImGuiKey_C, false));
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##IRIS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -591,12 +711,9 @@ private:
                                 if (ImGui::BeginChild("main_bottom_right", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("WB") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+                                    auto is_press = (ImGui::Button("WB") || ImGui::IsKeyPressed(ImGuiKey_V, false));
 
-                                    auto idx = cgi->get_wb_mode_state();
-                                    auto &vec = white_balance_mode_state;
-                                    std::string mode_str = get_string_from_pair_list(vec, idx);
-                                    ImGui::Text("%s", mode_str.c_str());
+                                    show_panel_wb_mode_str();
                                     show_panel_wb_value();
 
                                     ImGui::SetCursorScreenPos(p);
@@ -687,28 +804,414 @@ private:
     /////////////////////////////////////////////////////////////////
     // ISO control.
     /////////////////////////////////////////////////////////////////
-    void show_panel_iso_control()
+    void show_panel_iso_mode_str(bool center = false)
     {
-        ImGui::PushID("ISO_Control");
+        ImGui::PushID("ISO_MODE_STR");
 
-        if (ImGui::Button("ISO")) {
+        auto idx = cgi->get_iso_mode_state();
+        auto &vec = iso_mode_state;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_iso_agc_str(bool center = false)
+    {
+        ImGui::PushID("ISO_AGC_STR");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto idx = imaging.ExposureAGCEnable;
+        auto &vec = iso_agc_on_off;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_iso_base_sensitivity_str(bool center = false)
+    {
+        ImGui::PushID("ISO_BASE_SENSITIVITY_STR");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto idx = imaging.ExposureBaseSensitivity;
+        auto &vec = iso_base_sensitivity;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_iso_base_iso_str(bool center = false)
+    {
+        ImGui::PushID("ISO_BASE_ISO_STR");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto idx = imaging.ExposureBaseISO;
+        auto &vec = iso_base_iso;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_iso_value(bool center = false)
+    {
+        ImGui::PushID("ISO_VALUE");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto state = cgi->get_iso_mode_state();
+        auto is_agc = imaging.ExposureAGCEnable == CGICmd::COMMON::ON;
+
+        switch (state) {
+        case CGICmd::em_ISOModeState::GAIN:
+            {
+                auto idx = is_agc ? imaging.ExposureGainTemporary : imaging.ExposureGain;
+                auto &lst = CGICmd::exposure_gain;
+
+                std::string str = get_string_from_pair_list(lst, idx);
+                if (center) centering_text_pos(str.c_str());
+                ImGui::Text("%s", str.c_str());
+            }
+            break;
+
+        case CGICmd::em_ISOModeState::ISO:
+            {
+                auto idx = is_agc ? imaging.ExposureISOTemporary : imaging.ExposureISO;
+                auto &lst = CGICmd::exposure_iso;
+
+                std::string str = get_string_from_pair_list(lst, idx);
+                if (center) centering_text_pos(str.c_str());
+                ImGui::Text("%s", str.c_str());
+            }
+            break;
+
+        case CGICmd::em_ISOModeState::CINE_EI_QUITCK:
+        case CGICmd::em_ISOModeState::CINE_EI:
+            {
+                auto &imaging = cgi->inquiry_imaging();
+                auto &base_iso = imaging.ExposureBaseISO;
+                auto base_iso_str = json_conv_enum2str(base_iso);
+                auto idx = imaging.ExposureExposureIndex;
+
+                std::string str = "---";
+#if __cplusplus == 202002L  // C++20.
+                if (CGICmd::exposure_exposure_index.contains(base_iso_str)) {
+#else
+                auto &vec = CGICmd::exposure_exposure_index;
+                if (std::find_if(vec.begin(), vec.end(), [&base_iso_str](auto &e){ return e.first == base_iso_str; }) != vec.end()) {
+#endif
+                    auto &lst = CGICmd::exposure_exposure_index[base_iso_str];
+                    str = get_string_from_pair_list(lst, idx);
+                }
+                if (center) centering_text_pos(str.c_str());
+                ImGui::Text("%s", str.c_str());
+            }
+            break;
+
+        case CGICmd::em_ISOModeState::INVALID:
+        default:
             ;
+
         }
 
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
-            stat_main = em_State::MAIN;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
-            ;
+        ImGui::PopID();
+    }
+
+    void show_panel_iso_mode_auto_manual()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &on_off = imaging.ExposureAGCEnable;
+
+        auto f = [&](CGICmd::COMMON::em_OnOff val) -> void { cgi->set_imaging_ExposureAGCEnable(val); };
+
+        show_panel_select_value_listbox(
+            "##EXPOSURE_AGC_ENABLE",
+            on_off,
+            CGICmd::COMMON::OFF,
+            CGICmd::COMMON::ON,
+            iso_agc_on_off, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_iso_mode_base_sensitivity()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &low_high = imaging.ExposureBaseSensitivity;
+
+        auto f = [&](CGICmd::COMMON::em_LowHigh val) -> void { cgi->set_imaging_ExposureBaseSensitivity(val); };
+
+        show_panel_select_value_listbox(
+            "##EXPOSURE_BASE_SENSITIVITY",
+            low_high,
+            CGICmd::COMMON::LOW,
+            CGICmd::COMMON::HIGH,
+            iso_base_sensitivity, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_iso_mode_base_iso()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &base_iso = imaging.ExposureBaseISO;
+
+        auto f = [&](CGICmd::em_ExposureBaseISO val) -> void { cgi->set_imaging_ExposureBaseISO(val); };
+
+        show_panel_select_value_listbox(
+            "##EXPOSURE_BASE_ISO",
+            base_iso,
+            CGICmd::ExposureBaseISO_ISO800,
+            CGICmd::ExposureBaseISO_ISO12800,
+            iso_base_iso, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_iso_mode()
+    {
+        ImGui::PushID("ISO_MODE");
+
+        auto &imaging = cgi->inquiry_imaging();
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("iso_mode", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                if (stat_iso == em_StateISO::MODE_AUTO_MANUAL) {
+                    show_panel_iso_mode_auto_manual();
+                } else if (stat_iso == em_StateISO::MODE_BASE_SENSITIVITY || stat_iso == em_StateISO::MODE_BASE_ISO) {
+                    auto iso_gain = imaging.ExposureISOGainMode;
+                    if (iso_gain == CGICmd::ExposureISOGainMode_GAIN) {
+                        show_panel_iso_mode_base_sensitivity();
+                    } else if (iso_gain == CGICmd::ExposureISOGainMode_ISO) {
+                        show_panel_iso_mode_base_iso();
+                    }
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
+            stat_iso = em_StateISO::CONTROL;
+
         } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
             stat_main_bkup = stat_main;
             stat_main = em_State::LIVE_VIEW;
         }
 
+        ImGui::PopID();
+    }
+
+    void show_panel_iso_control_gain()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &gain = imaging.ExposureGain;
+        auto is_agc = imaging.ExposureAGCEnable == CGICmd::COMMON::ON;
+
+        if (is_agc) {
+            {
+                auto p = ImGui::GetCursorScreenPos();
+                auto sz = ImGui::GetWindowSize();
+                auto text_height = ImGui::GetTextLineHeightWithSpacing();
+                auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 2);
+                ImGui::SetCursorScreenPos(p_center);
+            }
+            show_panel_iso_mode_str(true);
+            show_panel_iso_agc_str(true);
+            show_panel_iso_base_sensitivity_str(true);
+            show_panel_iso_value(true);
+
+        } else {
+            auto f = [&](int val) -> void { cgi->set_imaging_ExposureGain(val); };
+
+            const auto [ exposure_gain_min, min_str ] = CGICmd::exposure_gain.front();
+            const auto [ exposure_gain_max, max_str ] = CGICmd::exposure_gain.back();
+
+            show_panel_select_value_listbox(
+                "##EXPOSURE_GAIN",
+                gain,
+                exposure_gain_min,
+                exposure_gain_max,
+                CGICmd::exposure_gain, f,
+                0.5f, 0.1f
+            );
+        }
+    }
+
+    void show_panel_iso_control_iso()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &iso = imaging.ExposureISO;
+        auto is_agc = imaging.ExposureAGCEnable == CGICmd::COMMON::ON;
+
+        if (is_agc) {
+            {
+                auto p = ImGui::GetCursorScreenPos();
+                auto sz = ImGui::GetWindowSize();
+                auto text_height = ImGui::GetTextLineHeightWithSpacing();
+                auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 2);
+                ImGui::SetCursorScreenPos(p_center);
+            }
+            show_panel_iso_mode_str(true);
+            show_panel_iso_agc_str(true);
+            show_panel_iso_base_iso_str(true);
+            show_panel_iso_value(true);
+
+        } else {
+            auto f = [&](int val) -> void { cgi->set_imaging_ExposureISO(val); };
+
+            const auto [ exposure_iso_min, min_str ] = CGICmd::exposure_iso.front();
+            const auto [ exposure_iso_max, max_str ] = CGICmd::exposure_iso.back();
+
+            show_panel_select_value_listbox(
+                "##EXPOSURE_ISO",
+                iso,
+                exposure_iso_min,
+                exposure_iso_max,
+                CGICmd::exposure_iso, f,
+                0.5f, 0.1f
+            );
+        }
+    }
+
+    void show_panel_iso_control_EI()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &base_iso = imaging.ExposureBaseISO;
+        auto base_iso_str = json_conv_enum2str(base_iso);
+
+#if __cplusplus == 202002L  // C++20.
+        auto &lst = (CGICmd::exposure_exposure_index.contains(base_iso_str))
+#else
+        auto &vec = CGICmd::exposure_exposure_index;
+        auto &lst = (std::find_if(vec.begin(), vec.end(), [&base_iso_str](auto &e){ return e.first == base_iso_str; }) != vec.end())
+#endif
+            ? CGICmd::exposure_exposure_index[base_iso_str]
+            : CGICmd::exposure_exposure_index_iso800
+            ;
+
+        auto &EI = imaging.ExposureExposureIndex;
+
+        auto f = [&](int val) -> void { cgi->set_imaging_ExposureExposureIndex(val); };
+
+        const auto [ EI_min, min_str ] = lst.front();
+        const auto [ EI_max, max_str ] = lst.back();
+
+        show_panel_select_value_listbox(
+            "##EXPOSURE_EXPOSSSURE_INDEX",
+            EI,
+            EI_min,
+            EI_max,
+            lst, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_iso_control_sub(CGICmd::em_ISOModeState state)
+    {
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("iso_control_sub", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+                switch (state) {
+                case CGICmd::em_ISOModeState::GAIN:
+                case CGICmd::em_ISOModeState::ISO:
+                    show_panel_text_select_mode_right_up_down();
+                    break;
+
+                case CGICmd::em_ISOModeState::CINE_EI:
+                    show_panel_text_select_mode_right_down();
+                    break;
+
+                case CGICmd::em_ISOModeState::CINE_EI_QUITCK:
+                case CGICmd::em_ISOModeState::INVALID:
+                default:
+                    ;
+                }
+
+                ImGui::TableSetColumnIndex(1);
+                switch (state) {
+                case CGICmd::em_ISOModeState::GAIN:
+                    show_panel_iso_control_gain();
+                    break;
+
+                case CGICmd::em_ISOModeState::ISO:
+                    show_panel_iso_control_iso();
+                    break;
+
+                case CGICmd::em_ISOModeState::CINE_EI_QUITCK:
+                case CGICmd::em_ISOModeState::CINE_EI:
+                    show_panel_iso_control_EI();
+                    break;
+
+                case CGICmd::em_ISOModeState::INVALID:
+                default:
+                    ;
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
         auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
         auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
-        if (is_drag_left) {
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
             stat_main = em_State::MAIN;
-        } else if (is_drag_right) {
+        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false) || (is_drag_right && mouse_delta_right.y < 0.0f)) {
+            if (state == CGICmd::em_ISOModeState::GAIN
+                || state == CGICmd::em_ISOModeState::ISO
+                ) {
+                stat_iso = em_StateISO::MODE_AUTO_MANUAL;
+            }
+        } else if (ImGui::IsKeyPressed(ImGuiKey_W, false) || (is_drag_right)) {
+            if (state == CGICmd::em_ISOModeState::GAIN
+                || state == CGICmd::em_ISOModeState::ISO
+                || state == CGICmd::em_ISOModeState::CINE_EI
+                ) {
+                stat_iso = em_StateISO::MODE_BASE_SENSITIVITY;  // = MODE_BASE_ISO.
+            }
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+    }
+
+    void show_panel_iso_control()
+    {
+        ImGui::PushID("ISO_Control");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto state = cgi->get_iso_mode_state();
+
+        iso_mode_state_bkup = state;
+
+        switch (stat_iso) {
+        case em_StateISO::MODE_AUTO_MANUAL:
+        case em_StateISO::MODE_BASE_SENSITIVITY:    // = MODE_BASE_ISO.
+            show_panel_iso_mode();
+            break;
+
+        case em_StateISO::CONTROL:
+            show_panel_iso_control_sub(state);
+            break;
+
+        default:
             ;
         }
 
