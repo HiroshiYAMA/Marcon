@@ -359,6 +359,31 @@ private:
         }
     }
 
+    void show_panel_text_select_mode()
+    {
+        if (ImGui::BeginChild("CHILD", ImVec2(-1, -1), ImGuiChildFlags_None, ImGuiWindowFlags_None))
+        {
+            ImVec2 p = ImGui::GetCursorScreenPos();
+            ImVec2 win_size = ImGui::GetWindowSize();
+
+            auto &io = ImGui::GetIO();
+            auto &style = ImGui::GetStyle();
+
+            // centering.
+            constexpr auto str = "Select Mode -->";
+            const auto text_size = ImGui::CalcTextSize(str);
+            const auto pad_frame = style.FramePadding;
+            const ImVec2 ar_size(text_size.x + pad_frame.x, text_size.y + pad_frame.y);
+            ImVec2 p_up(p.x + (win_size.x / 2) - (ar_size.x / 2) - pad_frame.x, p.y + 4.0f);
+
+            ImVec2 p_down(p_up.x, win_size.y - ar_size.y + (0.0f - 4.0f));
+            ImGui::SetCursorScreenPos(p_down);
+            auto col = (ImVec4)ImColor::HSV(0.75f / 7.0f, 1.0f, 1.0f);
+            ImGui::TextColored(col, "%s", str);
+        }
+        ImGui::EndChild();
+    }
+
 
 
     /////////////////////////////////////////////////////////////////
@@ -830,6 +855,7 @@ private:
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
+                show_panel_text_select_mode();
 
                 ImGui::TableSetColumnIndex(1);
                 {
@@ -865,6 +891,7 @@ private:
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
+                show_panel_text_select_mode();
 
                 ImGui::TableSetColumnIndex(1);
                 {
@@ -914,6 +941,7 @@ private:
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
+                show_panel_text_select_mode();
 
                 ImGui::TableSetColumnIndex(1);
                 {
@@ -953,6 +981,7 @@ private:
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
+                show_panel_text_select_mode();
 
                 ImGui::TableSetColumnIndex(1);
                 {
@@ -996,6 +1025,7 @@ private:
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
+                show_panel_text_select_mode();
 
                 ImGui::TableSetColumnIndex(1);
                 {
@@ -1193,6 +1223,7 @@ private:
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
+                show_panel_text_select_mode();
 
                 ImGui::TableSetColumnIndex(1);
                 {
@@ -1228,6 +1259,7 @@ private:
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
+                show_panel_text_select_mode();
 
                 ImGui::TableSetColumnIndex(1);
                 {
