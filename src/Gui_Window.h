@@ -375,8 +375,12 @@ public:
     // Main loop
     void Go()
     {
+#if 1
         bool full_screen = true;
         setDisplayModeFullscreen(window);
+#else
+        bool full_screen = false;
+#endif
 
         while (!glfwWindowShouldClose(window) && is_loop)
         {
