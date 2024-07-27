@@ -132,13 +132,13 @@ private:
 
         ImGui::Separator();
 
-        set_style_color(2.0f / 7.0f);
-
         for (auto &[k, v] : remote_server_info_DB) {
             ImGui::PushID(k.c_str());
 
             auto &rs = v.remote_server;
             std::string str = rs.ip_address + ":" + rs.port + " / [SRT]" + (rs.is_srt_listener ? "Listener" : "Caller");
+    
+            set_style_color(2.0f / 7.0f);
             if (ImGui::Button(str.c_str())) {
                 auto &gui_win_camera = v.handle;
                 if (!gui_win_camera) {
@@ -154,18 +154,21 @@ private:
                     }
                 }
             }
+            reset_style_color();
+
             ImGui::SameLine();
+
+            set_style_color(6.0f / 7.0f);
             if (ImGui::Button("Delete")) {
                 remote_server_info_DB.erase(k);
 
                 ImGui::PopID();
                 break;
             }
+            reset_style_color();
 
             ImGui::PopID();
         }
-
-        reset_style_color();
 
         // for (auto i = 0; i < remote_server_DB.size(); i++) {
         //     ImGui::PushID(i);
