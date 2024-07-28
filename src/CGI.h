@@ -251,6 +251,15 @@ enum class em_ISOModeState
     INVALID,
 };
 
+/////////////////////////////////////////////////////////////////
+// IRIS.
+enum class em_IrisModeState
+{
+    AUTO,
+    MANUAL,
+    INVALID,
+};
+
 
 
 struct st_Range
@@ -298,6 +307,13 @@ struct st_Imaging
     int ExposureISO;
     int ExposureISOTemporary;
     em_ExposureISOGainMode ExposureISOGainMode;
+
+    /////////////////////////////////////////////////////////////////
+    // IRIS.
+    COMMON::em_OnOff ExposureAutoIris;
+    int ExposureFNumber;    // 0.01/digit.
+    int ExposureIris;   // inquiry -> value is [256 / 3 = 85.3... step]
+    st_Range ExposureIrisRange;
 };
 
 
@@ -781,6 +797,41 @@ public:
             } else {
                 state = state_t::GAIN;
             }
+        }
+
+        return state;
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // IRIS.
+    void set_imaging_ExposureAutoIris(CGICmd::COMMON::em_OnOff val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "ExposureAutoIris=" + str;
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_imaging_ExposureIris(int val)
+    {
+        std::string msg;
+        msg = "ExposureIris=" + std::to_string(val);
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    CGICmd::em_IrisModeState get_iris_mode_state() const
+    {
+        using state_t = CGICmd::em_IrisModeState;
+        state_t state = state_t::INVALID;
+
+        auto is_auto = cmd_info.imaging.ExposureAutoIris;
+
+        if (is_auto == CGICmd::COMMON::ON) {
+            state = state_t::AUTO;
+        } else if (is_auto == CGICmd::COMMON::OFF) {
+            state = state_t::MANUAL;
         }
 
         return state;

@@ -95,7 +95,11 @@ public:
         CONTROL,
     };
 
-    enum class em_StateIRIS {};
+    enum class em_StateIris {
+        MODE,
+        CONTROL,
+    };
+
     enum class em_StateND {};
     enum class em_StateFPS {};
 
@@ -135,6 +139,16 @@ private:
         {CGICmd::ExposureBaseISO_ISO12800, "ISO 12800"},
     };
 
+    const std::list<std::pair<CGICmd::em_IrisModeState, std::string>> iris_mode_state = {
+        {CGICmd::em_IrisModeState::AUTO, "Auto"},
+        {CGICmd::em_IrisModeState::MANUAL, "Manual"},
+    };
+
+    const std::list<std::pair<CGICmd::COMMON::em_OnOff, std::string>> iris_auto_on_off = {
+        {CGICmd::COMMON::ON, "Auto"},
+        {CGICmd::COMMON::OFF, "Manual"},
+    };
+
     st_RemoteServer remote_server = {};
 
     em_State stat_main = em_State::MAIN;
@@ -151,6 +165,12 @@ private:
     // ISO.
     em_StateISO stat_iso = em_StateISO::CONTROL;
     CGICmd::em_ISOModeState iso_mode_state_bkup = CGICmd::em_ISOModeState::GAIN;
+
+    // IRIS.
+    em_StateIris stat_iris = em_StateIris::CONTROL;
+    CGICmd::em_IrisModeState iris_mode_state_bkup = CGICmd::em_IrisModeState::AUTO;
+    using iris_list_t = CGICmd::shutter_list;
+    iris_list_t exposure_iris;
 
     // cudaStream_t m_cuda_stream = NULL;
 
@@ -693,6 +713,10 @@ private:
 
                                     auto is_press = (ImGui::Button("IRIS") || ImGui::IsKeyPressed(ImGuiKey_C, false));
 
+                                    show_panel_iris_mode_str();
+                                    show_panel_iris_fnumber_str();
+                                    // show_panel_iris_value();
+
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##IRIS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
 
@@ -771,28 +795,269 @@ private:
     /////////////////////////////////////////////////////////////////
     // IRIS control.
     /////////////////////////////////////////////////////////////////
-    void show_panel_iris_control()
+    void show_panel_iris_mode_str(bool center = false)
     {
-        ImGui::PushID("IRIS_Control");
+        ImGui::PushID("IRIS_MODE_STR");
 
-        if (ImGui::Button("IRIS")) {
-            ;
+        auto idx = cgi->get_iris_mode_state();
+        auto &vec = iris_mode_state;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_iris_fnumber_str(bool center = false)
+    {
+        ImGui::PushID("IRIS_FNUMBER_STR");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto fnumber = imaging.ExposureFNumber;
+        auto fn_i = fnumber / 100;
+        auto fn_f = fnumber % 100;
+        auto fn_f_10 = fnumber % 10;
+        std::string str = "F" + std::to_string(fn_i);
+        if (fn_f != 0) {
+            str += ".";
+            if (fn_f_10 != 0) {
+                str += std::to_string(fn_f);
+            } else {
+                str += std::to_string(fn_f / 10);
+            }
         }
 
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
-            stat_main = em_State::MAIN;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
-            ;
+        if (center) {
+            centering_text_pos(str.c_str());
+        }
+
+        ImGui::Text("%s", str.c_str());
+
+        ImGui::PopID();
+    }
+
+    void show_panel_iris_value(bool center = false)
+    {
+        ImGui::PushID("IRIS_VALUE_STR");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto iris = imaging.ExposureIris;
+
+        auto f = CGICmd::calc_fnum(iris);
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(2) << f;
+        std::string str = "F" + ss.str();
+
+        if (center) {
+            centering_text_pos(str.c_str());
+        }
+
+        ImGui::Text("%s", str.c_str());
+
+        ImGui::PopID();
+    }
+
+    void show_panel_iris_mode_auto_manual()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &on_off = imaging.ExposureAutoIris;
+
+        auto f = [&](CGICmd::COMMON::em_OnOff val) -> void { cgi->set_imaging_ExposureAutoIris(val); };
+
+        show_panel_select_value_listbox(
+            "##EXPOSURE_AUTO_IRIS",
+            on_off,
+            CGICmd::COMMON::OFF,
+            CGICmd::COMMON::ON,
+            iris_auto_on_off, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_iris_mode()
+    {
+        ImGui::PushID("IRIS_MODE");
+
+        auto &imaging = cgi->inquiry_imaging();
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("iris_mode", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                show_panel_iris_mode_auto_manual();
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
+            stat_iris = em_StateIris::CONTROL;
+
         } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
             stat_main_bkup = stat_main;
             stat_main = em_State::LIVE_VIEW;
         }
 
+        ImGui::PopID();
+    }
+
+    void show_panel_iris_control_auto()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto fnumer = imaging.ExposureFNumber;
+        auto iris = imaging.ExposureIris;
+
+        {
+            auto p = ImGui::GetCursorScreenPos();
+            auto sz = ImGui::GetWindowSize();
+            auto text_height = ImGui::GetTextLineHeightWithSpacing();
+            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 1.5);
+            ImGui::SetCursorScreenPos(p_center);
+        }
+        show_panel_iris_mode_str(true);
+        show_panel_iris_fnumber_str(true);
+        show_panel_iris_value(true);
+    }
+
+    iris_list_t gen_iris_list(int idx_max, int idx_min)
+    {
+        iris_list_t lst_remake;
+        auto &lst = exposure_iris;
+        auto lst_max = lst.front().first;
+        auto lst_min = lst.back().first;
+
+        if (idx_max > lst_max) {
+            ;
+        }
+
+        {
+            auto idx_search = [](auto &lst, auto idx) -> auto {
+                auto itr = std::find_if(lst.begin(), lst.end(), [&idx](auto &e) {
+                    auto &[k, v] = e;
+                    float idx_f = idx;
+                    auto step = std::abs(CGICmd::iris_k_add) / 2.0f;
+                    bool ret = idx_f <= (k + step) && idx_f > (k - step);
+                    return ret;
+                });
+                return itr;
+            };
+            auto itr_s = idx_search(lst, idx_max);
+            auto itr_e = idx_search(lst, idx_min);
+            itr_e++;
+
+            lst_remake.assign(itr_s, itr_e);
+        }
+
+        if (idx_min < lst_min) {
+            ;
+        }
+
+        return lst_remake;
+    }
+
+    void show_panel_iris_control_manual()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &iris = imaging.ExposureIris;
+        auto iris_max = imaging.ExposureIrisRange.min;  // step is minus.
+        auto iris_min = imaging.ExposureIrisRange.max;  // step is minus.
+
+        {
+            float iris_f = iris / std::abs(CGICmd::iris_k_add);
+            iris_f = std::round(iris_f);
+            iris = std::round(iris_f * std::abs(CGICmd::iris_k_add));
+        }
+
+        auto lst = gen_iris_list(iris_max, iris_min);
+
+        auto f = [&](int val) -> void { cgi->set_imaging_ExposureIris(val); };
+
+        const auto [ exposure_iris_max, min_str ] = lst.front();
+        const auto [ exposure_iris_min, max_str ] = lst.back();
+
+        show_panel_select_value_listbox(
+            "##EXPOSURE_IRIS",
+            iris,
+            exposure_iris_min,
+            exposure_iris_max,
+            lst, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_iris_control_sub(CGICmd::em_IrisModeState state)
+    {
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("iris_control_sub", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+                show_panel_text_select_mode();
+
+                ImGui::TableSetColumnIndex(1);
+                switch (state) {
+                case CGICmd::em_IrisModeState::AUTO:
+                    show_panel_iris_control_auto();
+                    break;
+
+                case CGICmd::em_IrisModeState::MANUAL:
+                    show_panel_iris_control_manual();
+                    break;
+
+                case CGICmd::em_IrisModeState::INVALID:
+                default:
+                    ;
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
         auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
         auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
-        if (is_drag_left) {
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
             stat_main = em_State::MAIN;
-        } else if (is_drag_right) {
+        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false) || is_drag_right) {
+            stat_iris = em_StateIris::MODE;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+    }
+
+    void show_panel_iris_control()
+    {
+        ImGui::PushID("IRIS_Control");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto state = cgi->get_iris_mode_state();
+
+        iris_mode_state_bkup = state;
+
+        switch (stat_iris) {
+        case em_StateIris::MODE:
+            show_panel_iris_mode();
+            break;
+
+        case em_StateIris::CONTROL:
+            show_panel_iris_control_sub(state);
+            break;
+
+        default:
             ;
         }
 
@@ -2071,6 +2336,19 @@ public:
         tex_id = make_texture(0, GL_TEXTURE_2D, tex_width, tex_height, 0, tex_type, RGB_CH_NUM);
 
         // is_display_image = false;
+
+        {
+            const float st = 32768; // F1.
+            const float ed = 30208; // F32.
+            for (auto i = st; i > (ed - 1); i += CGICmd::iris_k_add) {
+                auto fnum = CGICmd::calc_fnum(i);
+                int iris = static_cast<int>(std::round(i));
+                std::stringstream ss;
+                ss << "F" << std::fixed << std::setprecision(2) << fnum;
+                std::string fnum_str = ss.str();
+                exposure_iris.emplace_back(std::pair{ iris, fnum_str });
+            }
+        }
 
         auto is_connected = CONNECT();
         camera_connection_stat.store(is_connected ? em_Camera_Connection_State::CONNECTED : em_Camera_Connection_State::DISCONNECTED);

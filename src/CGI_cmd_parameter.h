@@ -27,6 +27,7 @@
 namespace CGICmd
 {
 
+// Shutter.
 using shutter_list = std::list<std::pair<int, std::string>>;
 extern shutter_list exposure_exposure_time_5994p;
 extern shutter_list exposure_exposure_time_5000p;
@@ -39,9 +40,11 @@ extern std::unordered_map<std::string, shutter_list> exposure_exposure_time;
 using angle_list = shutter_list;
 extern angle_list exposure_angle;
 
+// White Balance.
 using color_temp_list = shutter_list;
 extern color_temp_list white_balance_color_temp;
 
+// ISO.
 using iso_list = shutter_list;
 extern iso_list exposure_iso;
 
@@ -52,5 +55,17 @@ using EI_list = shutter_list;
 extern EI_list exposure_exposure_index_iso800;
 extern EI_list exposure_exposure_index_iso12800;
 extern std::unordered_map<std::string, EI_list> exposure_exposure_index;
+
+// IRIS.
+constexpr auto iris_EV_div = 3.0f;
+const auto iris_sqrt2 = std::sqrt(2.0f);
+constexpr auto iris_unit_EV_inv = 256.0f;
+constexpr auto iris_F1_value = 32768.0f;
+const auto iris_k_multi = std::pow(iris_sqrt2, 1.0f / iris_EV_div);
+const auto iris_k_add = -(iris_unit_EV_inv / iris_EV_div);
+inline auto calc_fnum = [](auto val) -> auto {
+    auto fnum = std::pow(CGICmd::iris_k_multi, (val - CGICmd::iris_F1_value) / CGICmd::iris_k_add);
+    return fnum;
+};
 
 }   // namespace CGICmd

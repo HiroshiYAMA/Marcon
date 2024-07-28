@@ -100,6 +100,11 @@ constexpr auto EXPOSURE_GAIN_TEMPORARY = "ExposureGainTemporary";
 constexpr auto EXPOSURE_ISO = "ExposureISO";
 constexpr auto EXPOSURE_ISO_TEMPORARY = "ExposureISOTemporary";
 constexpr auto EXPOSURE_ISO_GAIN_MODE = "ExposureISOGainMode";
+// IRIS.
+constexpr auto EXPOSURE_AUTO_IRIS = "ExposureAutoIris";
+constexpr auto EXPOSURE_FNUMBER = "ExposureFNumber";
+constexpr auto EXPOSURE_IRIS = "ExposureIris";
+constexpr auto EXPOSURE_IRIS_RANGE = "ExposureIrisRange";
 //
 void to_json(njson& j, const CGICmd::st_Imaging& p) {
     // shutter.
@@ -128,6 +133,11 @@ void to_json(njson& j, const CGICmd::st_Imaging& p) {
     j[EXPOSURE_ISO] = std::to_string(p.ExposureISO);
     j[EXPOSURE_ISO_TEMPORARY] = std::to_string(p.ExposureISOTemporary);
     j[EXPOSURE_ISO_GAIN_MODE] = p.ExposureISOGainMode;
+    // IRIS.
+    j[EXPOSURE_AUTO_IRIS] = p.ExposureAutoIris;
+    j[EXPOSURE_FNUMBER] = std::to_string(p.ExposureFNumber);
+    j[EXPOSURE_IRIS] = std::to_string(p.ExposureIris);
+    j[EXPOSURE_IRIS_RANGE] = conv_range2str(p.ExposureIrisRange);
 }
 void from_json(const njson& j, CGICmd::st_Imaging& p) {
     // shutter.
@@ -156,6 +166,11 @@ void from_json(const njson& j, CGICmd::st_Imaging& p) {
     conv_json_str2num(j, EXPOSURE_ISO, p.ExposureISO);
     conv_json_str2num(j, EXPOSURE_ISO_TEMPORARY, p.ExposureISOTemporary);
     json_get_val(j, EXPOSURE_ISO_GAIN_MODE, p.ExposureISOGainMode);
+    // IRIS.
+    json_get_val(j, EXPOSURE_AUTO_IRIS, p.ExposureAutoIris);
+    conv_json_str2num(j, EXPOSURE_FNUMBER, p.ExposureFNumber);
+    conv_json_str2num(j, EXPOSURE_IRIS, p.ExposureIris);
+    conv_json_str2range(j, EXPOSURE_IRIS_RANGE, p.ExposureIrisRange);
 }
 
 
