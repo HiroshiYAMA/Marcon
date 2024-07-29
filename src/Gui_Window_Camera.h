@@ -169,6 +169,23 @@ private:
         {CGICmd::ExposureNDClear_FILTERED, "Filtered"},
     };
 
+    const std::list<std::pair<CGICmd::em_RecFormatFrequency, std::string>> fps_mode_state = {
+        {CGICmd::RecFormatFrequency_5994, "59.94p"},
+        {CGICmd::RecFormatFrequency_5000, "50p"},
+        {CGICmd::RecFormatFrequency_2997, "29.97p"},
+        {CGICmd::RecFormatFrequency_2500, "25p"},
+        {CGICmd::RecFormatFrequency_2400, "24p"},
+        {CGICmd::RecFormatFrequency_2398, "23.98p"},
+    };
+
+    const std::list<std::pair<CGICmd::em_RecFormatVideoFormat, std::string>> fps_video_format = {
+        {CGICmd::RecFormatVideoFormat_4096x2160p, "4096x2160p"},
+        {CGICmd::RecFormatVideoFormat_3840x2160p, "3840x2160p"},
+        {CGICmd::RecFormatVideoFormat_1920x1080p, "1920x1080p"},
+        {CGICmd::RecFormatVideoFormat_1920x1080p_50, "1920x1080p_50"},
+        {CGICmd::RecFormatVideoFormat_1920x1080p_35, "1920x1080p_35"},
+    };
+
     st_RemoteServer remote_server = {};
 
     em_State stat_main = em_State::MAIN;
@@ -580,6 +597,9 @@ private:
                                     auto p = ImGui::GetCursorScreenPos();
 
                                     auto is_press = (ImGui::Button("FPS") || ImGui::IsKeyPressed(ImGuiKey_W, false));
+
+                                    show_panel_fps_mode_str();
+                                    show_panel_fps_video_format();
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##FPS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -1542,7 +1562,7 @@ private:
         case CGICmd::ExposureShutterModeState_AUTO:
             {
                 auto &project = cgi->inquiry_project();
-                auto frame_rate = project.RecFormatFrequency;
+                auto frame_rate = json_conv_enum2str(project.RecFormatFrequency);
                 auto idx = imaging.ExposureExposureTime;
 
                 std::string str = "---";
@@ -1694,7 +1714,7 @@ private:
                 ImGui::TableSetColumnIndex(1);
                 {
                     auto &project = cgi->inquiry_project();
-                    auto frame_rate = project.RecFormatFrequency;
+                    auto frame_rate = json_conv_enum2str(project.RecFormatFrequency);
 #if __cplusplus == 202002L  // C++20.
                     auto &lst = (CGICmd::exposure_exposure_time.contains(frame_rate))
 #else
@@ -2347,6 +2367,30 @@ private:
     /////////////////////////////////////////////////////////////////
     // FPS control.
     /////////////////////////////////////////////////////////////////
+    void show_panel_fps_mode_str(bool center = false)
+    {
+        ImGui::PushID("FPS_MODE_STR");
+
+        auto &project = cgi->inquiry_project();
+        auto idx = project.RecFormatFrequency;
+        auto &vec = fps_mode_state;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_fps_video_format(bool center = false)
+    {
+        ImGui::PushID("FPS_VIDEO_FORMAT");
+
+        auto &project = cgi->inquiry_project();
+        auto idx = project.RecFormatVideoFormat;
+        auto &vec = fps_video_format;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
     void show_panel_fps_control()
     {
         ImGui::PushID("FPS_Control");
@@ -2354,6 +2398,24 @@ private:
         if (ImGui::Button("FPS")) {
             ;
         }
+
+        {
+            auto p = ImGui::GetCursorScreenPos();
+            auto sz = ImGui::GetWindowSize();
+            auto text_height = ImGui::GetTextLineHeightWithSpacing();
+            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 3.0f);
+            ImGui::SetCursorScreenPos(p_center);
+        }
+        {
+            constexpr auto btn_scale = 2.0f;
+            ImGui::SetWindowFontScale(btn_scale);
+            std::string str = "KJC";
+            centering_text_pos(str.c_str());
+            ImGui::TextColored(ImVec4(1, 1, 0, 1), "%s", str.c_str());
+            ImGui::SetWindowFontScale(1.0f);
+        }
+        show_panel_fps_mode_str(true);
+        show_panel_fps_video_format(true);
 
         if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
             stat_main = em_State::MAIN;

@@ -346,17 +346,53 @@ struct st_Imaging
 
 /////////////////////////////////////////////////////////////////////
 // project.
+enum em_RecFormatFrequency
+{
+    RecFormatFrequency_5994,
+    RecFormatFrequency_5000,
+    RecFormatFrequency_2997,
+    RecFormatFrequency_2500,
+    RecFormatFrequency_2400,
+    RecFormatFrequency_2398,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_RecFormatFrequency, {
+    {RecFormatFrequency_5994, "5994"},
+    {RecFormatFrequency_5000, "5000"},
+    {RecFormatFrequency_2997, "2997"},
+    {RecFormatFrequency_2500, "2500"},
+    {RecFormatFrequency_2400, "2400"},
+    {RecFormatFrequency_2398, "2398"},
+})
+
+enum em_RecFormatVideoFormat
+{
+    RecFormatVideoFormat_4096x2160p,
+    RecFormatVideoFormat_3840x2160p,
+    RecFormatVideoFormat_1920x1080p,
+    RecFormatVideoFormat_1920x1080p_50,
+    RecFormatVideoFormat_1920x1080p_35,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_RecFormatVideoFormat, {
+    {RecFormatVideoFormat_4096x2160p, "4096x2160p"},
+    {RecFormatVideoFormat_3840x2160p, "3840x2160p"},
+    {RecFormatVideoFormat_1920x1080p, "1920x1080p"},
+    {RecFormatVideoFormat_1920x1080p_50, "1920x1080p_50"},
+    {RecFormatVideoFormat_1920x1080p_35, "1920x1080p_35"},
+})
+
 struct st_Project
 {
     static constexpr auto cmd = "project";
 
-    std::string RecFormatFrequency;
+    em_RecFormatFrequency RecFormatFrequency;
+    em_RecFormatVideoFormat RecFormatVideoFormat;
 
 public:
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(
         st_Project,
 
-        RecFormatFrequency
+        RecFormatFrequency,
+        RecFormatVideoFormat
     )
 };
 
