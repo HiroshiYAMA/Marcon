@@ -75,6 +75,16 @@ NLOHMANN_JSON_SERIALIZE_ENUM( em_LowHigh, {
     {HIGH, "high"},
 })
 
+enum em_PressRelease
+{
+    PRESS,
+    RELEASE,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_PressRelease, {
+    {PRESS, "press"},
+    {RELEASE, "release"},
+})
+
 }   // namespace COMMON.
 
 
@@ -345,6 +355,35 @@ struct st_Imaging
 
 
 /////////////////////////////////////////////////////////////////////
+// cameraoperation.
+enum em_MediaRecordingStatus
+{
+    MediaRecordingStatus_STANDBY,
+    MediaRecordingStatus_REC,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_MediaRecordingStatus, {
+    {MediaRecordingStatus_STANDBY, "standby"},
+    {MediaRecordingStatus_REC, "rec"},
+})
+
+struct st_Cameraoperation
+{
+    static constexpr auto cmd = "cameraoperation";
+
+    COMMON::em_PressRelease MediaRecording;
+    em_MediaRecordingStatus MediaRecordingStatus;
+
+public:
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(
+        st_Cameraoperation,
+
+        MediaRecordingStatus
+    )
+};
+
+
+
+/////////////////////////////////////////////////////////////////////
 // project.
 enum em_RecFormatFrequency
 {
@@ -521,6 +560,7 @@ private:
         CGICmd::st_System system;
         CGICmd::st_Status status;
         CGICmd::st_Imaging imaging;
+        CGICmd::st_Cameraoperation cameraoperation;
         CGICmd::st_Project project;
         CGICmd::st_Network network;
         CGICmd::st_Stream stream;
@@ -985,6 +1025,26 @@ public:
 
 
     /////////////////////////////////////////////////////////////////
+    // cameraoperation.
+    void click_cameraoperation_MediaRecording()
+    {
+        std::string msg;
+
+        // press.
+        msg = "MediaRecording=" + json_conv_enum2str(CGICmd::COMMON::PRESS);
+        set_command<CGICmd::st_Cameraoperation>(msg);
+
+        // wait for sending 'press' command.
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        // release.
+        msg = "MediaRecording=" + json_conv_enum2str(CGICmd::COMMON::RELEASE);
+        set_command<CGICmd::st_Cameraoperation>(msg);
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
     // stream.
     void set_stream_StreamMode(CGICmd::em_StreamMode mode)
     {
@@ -1043,6 +1103,7 @@ public:
     auto &inquiry_system() { return cmd_info.system; }
     auto &inquiry_status() { return cmd_info.status; }
     auto &inquiry_imaging() { return cmd_info.imaging; }
+    auto &inquiry_cameraoperation() { return cmd_info.cameraoperation; }
     auto &inquiry_project() { return cmd_info.project; }
     auto &inquiry_network() { return cmd_info.network; }
     auto &inquiry_srt() { return cmd_info.srt; }
@@ -1081,6 +1142,7 @@ public:
                 inquiry(cmdi.system);
                 inquiry(cmdi.status);
                 inquiry(cmdi.imaging);
+                inquiry(cmdi.cameraoperation);
                 inquiry(cmdi.project);
                 inquiry(cmdi.network);
                 inquiry(cmdi.stream);

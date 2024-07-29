@@ -278,14 +278,23 @@ private:
 
         std::string str = "REC";
         if (ImGui::Button(str.c_str())) {
-            ;
+            cgi->click_cameraoperation_MediaRecording();
         }
 
         ImGui::SameLine();
 
-        auto color = ImVec4{0, 1, 0, 1};
-        auto status_str = "Not Recording";
-        ImGui::TextColored(color, "%s", status_str);
+        auto &cameraoperation = cgi->inquiry_cameraoperation();
+        auto is_rec = (cameraoperation.MediaRecordingStatus == CGICmd::em_MediaRecordingStatus::MediaRecordingStatus_REC);
+        ImVec4 color;
+        std::string status_str;
+        if (is_rec) {
+            color = ImVec4{1, 0, 0, 1};
+            status_str = "Recording";
+        } else {
+            color = ImVec4{0, 1, 0, 1};
+            status_str = "Not Recording";
+        }
+        ImGui::TextColored(color, "%s", status_str.c_str());
 
         reset_style_color();
 
