@@ -43,6 +43,12 @@ make install
 ```
 
 ## キーバインド
+
+こんな感じのボタンパネル。
+
+<img src="images/Marcon_Button.jpg" width="75%">
+
+
 ### 共通
 | key | description |
 | --- | --- |
@@ -59,6 +65,7 @@ make install
 | X | go to ND panel |
 | C | go to IRIS panel |
 | V | go to White Balance panel |
+| Space | Click **REC** button |
 
 ### Camera Control パネル
 | key | description |
@@ -66,6 +73,7 @@ make install
 | E, cursor UP | select item above |
 | V, curos DOWN | select item below |
 | X | go to MODE select panel |
+| W | go to MODE(another) select panel |
 
 ## マウス/タッチ操作
 ### 押せそうなボタンっぽい箇所
@@ -78,7 +86,16 @@ make install
 ### (Camera Control パネル) X キーの代わり
 左から右に画面いっぱいにドラッグすると X キーと同じ挙動をする。  
 (go to MODE select panel)  
-**Left --> Right**
+**Left --/ Right**
+
+ただし、
+W キーが有効な時(MODE(another)がある時)は、
+斜めに左下から右上に画面いっぱいにドラッグすると X キーと同じ挙動をする。  
+
+### (Camera Control パネル) W キーの代わり
+斜めに左上から右下に画面いっぱいにドラッグすると W キーと同じ挙動をする。  
+(go to MODE(another) select panel)  
+**Left --\\ Right**
 
 ### (Launcher パネル) アプリケーションの終了
 ぐちゃぐちゃぐちゃ～っとマウスをドラッグするかタッチパネルをこすると
