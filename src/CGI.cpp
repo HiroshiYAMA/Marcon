@@ -105,6 +105,10 @@ constexpr auto EXPOSURE_AUTO_IRIS = "ExposureAutoIris";
 constexpr auto EXPOSURE_FNUMBER = "ExposureFNumber";
 constexpr auto EXPOSURE_IRIS = "ExposureIris";
 constexpr auto EXPOSURE_IRIS_RANGE = "ExposureIrisRange";
+// ND.
+constexpr auto EXPOSURE_AUTO_ND_FILTER_ENABLE = "ExposureAutoNDFilterEnable";
+constexpr auto EXPOSURE_ND_CLEAR = "ExposureNDClear";
+constexpr auto EXPOSURE_ND_VARIABLE = "ExposureNDVariable";
 //
 void to_json(njson& j, const CGICmd::st_Imaging& p) {
     // shutter.
@@ -138,6 +142,10 @@ void to_json(njson& j, const CGICmd::st_Imaging& p) {
     j[EXPOSURE_FNUMBER] = std::to_string(p.ExposureFNumber);
     j[EXPOSURE_IRIS] = std::to_string(p.ExposureIris);
     j[EXPOSURE_IRIS_RANGE] = conv_range2str(p.ExposureIrisRange);
+    // ND.
+    j[EXPOSURE_AUTO_ND_FILTER_ENABLE] = p.ExposureAutoNDFilterEnable;
+    j[EXPOSURE_ND_CLEAR] = p.ExposureNDClear;
+    j[EXPOSURE_ND_VARIABLE] = std::to_string(p.ExposureNDVariable);
 }
 void from_json(const njson& j, CGICmd::st_Imaging& p) {
     // shutter.
@@ -171,6 +179,10 @@ void from_json(const njson& j, CGICmd::st_Imaging& p) {
     conv_json_str2num(j, EXPOSURE_FNUMBER, p.ExposureFNumber);
     conv_json_str2num(j, EXPOSURE_IRIS, p.ExposureIris);
     conv_json_str2range(j, EXPOSURE_IRIS_RANGE, p.ExposureIrisRange);
+    // ND.
+    json_get_val(j, EXPOSURE_AUTO_ND_FILTER_ENABLE, p.ExposureAutoNDFilterEnable);
+    json_get_val(j, EXPOSURE_ND_CLEAR, p.ExposureNDClear);
+    conv_json_str2num(j, EXPOSURE_ND_VARIABLE, p.ExposureNDVariable);
 }
 
 

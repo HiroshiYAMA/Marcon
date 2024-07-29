@@ -100,7 +100,11 @@ public:
         CONTROL,
     };
 
-    enum class em_StateND {};
+    enum class em_StateND {
+        MODE,
+        CONTROL,
+    };
+
     enum class em_StateFPS {};
 
 private:
@@ -149,6 +153,22 @@ private:
         {CGICmd::COMMON::OFF, "Manual"},
     };
 
+    const std::list<std::pair<CGICmd::em_NDModeState, std::string>> nd_mode_state = {
+        {CGICmd::em_NDModeState::AUTO, "Auto"},
+        {CGICmd::em_NDModeState::MANUAL, "Manual"},
+        {CGICmd::em_NDModeState::CLEAR, "Clear"},
+    };
+
+    const std::list<std::pair<CGICmd::COMMON::em_OnOff, std::string>> nd_auto_on_off = {
+        {CGICmd::COMMON::ON, "Auto"},
+        {CGICmd::COMMON::OFF, "Manual"},
+    };
+
+    const std::list<std::pair<CGICmd::em_ExposureNDClear, std::string>> nd_clear_on_off = {
+        {CGICmd::ExposureNDClear_CLEAR, "Clear"},
+        {CGICmd::ExposureNDClear_FILTERED, "Filtered"},
+    };
+
     st_RemoteServer remote_server = {};
 
     em_State stat_main = em_State::MAIN;
@@ -171,6 +191,10 @@ private:
     CGICmd::em_IrisModeState iris_mode_state_bkup = CGICmd::em_IrisModeState::AUTO;
     using iris_list_t = CGICmd::shutter_list;
     iris_list_t exposure_iris;
+
+    // ND.
+    em_StateND stat_nd = em_StateND::CONTROL;
+    CGICmd::em_NDModeState nd_mode_state_bkup = CGICmd::em_NDModeState::AUTO;
 
     // cudaStream_t m_cuda_stream = NULL;
 
@@ -692,6 +716,12 @@ private:
                                     auto p = ImGui::GetCursorScreenPos();
 
                                     auto is_press = (ImGui::Button("ND") || ImGui::IsKeyPressed(ImGuiKey_X, false));
+
+                                    show_panel_nd_mode_str();
+                                    auto state = cgi->get_nd_mode_state();
+                                    if (state == CGICmd::em_NDModeState::AUTO || state == CGICmd::em_NDModeState::MANUAL) {
+                                        show_panel_nd_value();
+                                    }
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##ND", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -2115,28 +2145,197 @@ private:
     /////////////////////////////////////////////////////////////////
     // ND control.
     /////////////////////////////////////////////////////////////////
-    void show_panel_nd_control()
+    void show_panel_nd_mode_str(bool center = false)
     {
-        ImGui::PushID("ND_Control");
+        ImGui::PushID("ND_MODE_STR");
 
-        if (ImGui::Button("ND")) {
-            ;
+        auto idx = cgi->get_nd_mode_state();
+        auto &vec = nd_mode_state;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_nd_value(bool center = false)
+    {
+        ImGui::PushID("ND_VALUE_STR");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto idx = imaging.ExposureNDVariable;
+        auto &vec = CGICmd::exposure_nd;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_nd_mode_select()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto mode = cgi->get_nd_mode_state();
+
+        auto f = [&](CGICmd::em_NDModeState val) -> void { cgi->set_nd_mode_state(val); };
+
+        show_panel_select_value_listbox(
+            "##ND_MODE_SELECT",
+            mode,
+            CGICmd::em_NDModeState::AUTO,
+            CGICmd::em_NDModeState::CLEAR,
+            nd_mode_state, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_nd_mode()
+    {
+        ImGui::PushID("ND_MODE");
+
+        auto &imaging = cgi->inquiry_imaging();
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("nd_mode", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                show_panel_nd_mode_select();
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
         }
 
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
-            stat_main = em_State::MAIN;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
-            ;
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
+            stat_nd = em_StateND::CONTROL;
+
         } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
             stat_main_bkup = stat_main;
             stat_main = em_State::LIVE_VIEW;
         }
 
+        ImGui::PopID();
+    }
+
+    void show_panel_nd_control_auto()
+    {
+        {
+            auto p = ImGui::GetCursorScreenPos();
+            auto sz = ImGui::GetWindowSize();
+            auto text_height = ImGui::GetTextLineHeightWithSpacing();
+            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 1.0f);
+            ImGui::SetCursorScreenPos(p_center);
+        }
+        show_panel_nd_mode_str(true);
+        show_panel_nd_value(true);
+    }
+
+    void show_panel_nd_control_manual()
+    {
+        auto &imaging = cgi->inquiry_imaging();
+        auto &nd = imaging.ExposureNDVariable;
+        const auto &lst = CGICmd::exposure_nd;
+        auto nd_min = lst.front().first;
+        auto nd_max = lst.back().first;
+
+        auto f = [&](int val) -> void { cgi->set_imaging_ExposureNDVariable(val); };
+
+        show_panel_select_value_listbox(
+            "##EXPOSURE_ND_VARIABLE",
+            nd,
+            nd_min,
+            nd_max,
+            lst, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_nd_control_clear()
+    {
+        {
+            auto p = ImGui::GetCursorScreenPos();
+            auto sz = ImGui::GetWindowSize();
+            auto text_height = ImGui::GetTextLineHeightWithSpacing();
+            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 0.5f);
+            ImGui::SetCursorScreenPos(p_center);
+        }
+        show_panel_nd_mode_str(true);
+    }
+
+    void show_panel_nd_control_sub(CGICmd::em_NDModeState state)
+    {
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("nd_control_sub", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+                show_panel_text_select_mode();
+
+                ImGui::TableSetColumnIndex(1);
+                switch (state) {
+                case CGICmd::em_NDModeState::AUTO:
+                    show_panel_nd_control_auto();
+                    break;
+
+                case CGICmd::em_NDModeState::MANUAL:
+                    show_panel_nd_control_manual();
+                    break;
+
+                case CGICmd::em_NDModeState::CLEAR:
+                    show_panel_nd_control_clear();
+                    break;
+
+                case CGICmd::em_NDModeState::INVALID:
+                default:
+                    ;
+                }
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
         auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
         auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
-        if (is_drag_left) {
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
             stat_main = em_State::MAIN;
-        } else if (is_drag_right) {
+        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false) || is_drag_right) {
+            stat_nd = em_StateND::MODE;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+    }
+
+    void show_panel_nd_control()
+    {
+        ImGui::PushID("ND_Control");
+
+        auto &imaging = cgi->inquiry_imaging();
+        auto state = cgi->get_nd_mode_state();
+
+        nd_mode_state_bkup = state;
+
+        switch (stat_nd) {
+        case em_StateND::MODE:
+            show_panel_nd_mode();
+            break;
+
+        case em_StateND::CONTROL:
+            show_panel_nd_control_sub(state);
+            break;
+
+        default:
             ;
         }
 

@@ -68,4 +68,8 @@ inline auto calc_fnum = [](auto val) -> auto {
     return fnum;
 };
 
+// ND.
+using nd_list_t = shutter_list;
+extern nd_list_t exposure_nd;
+
 }   // namespace CGICmd

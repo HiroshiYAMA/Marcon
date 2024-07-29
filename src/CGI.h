@@ -260,6 +260,26 @@ enum class em_IrisModeState
     INVALID,
 };
 
+/////////////////////////////////////////////////////////////////
+// ND.
+enum em_ExposureNDClear
+{
+    ExposureNDClear_FILTERED,
+    ExposureNDClear_CLEAR,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_ExposureNDClear, {
+    {ExposureNDClear_FILTERED, "filtered"},
+    {ExposureNDClear_CLEAR, "clear"},
+})
+
+enum class em_NDModeState
+{
+    AUTO,
+    MANUAL,
+    CLEAR,
+    INVALID,
+};
+
 
 
 struct st_Range
@@ -314,6 +334,12 @@ struct st_Imaging
     int ExposureFNumber;    // 0.01/digit.
     int ExposureIris;   // inquiry -> value is [256 / 3 = 85.3... step]
     st_Range ExposureIrisRange;
+
+    /////////////////////////////////////////////////////////////////
+    // ND.
+    COMMON::em_OnOff ExposureAutoNDFilterEnable;
+    em_ExposureNDClear ExposureNDClear;
+    int ExposureNDVariable;
 };
 
 
@@ -831,6 +857,89 @@ public:
         if (is_auto == CGICmd::COMMON::ON) {
             state = state_t::AUTO;
         } else if (is_auto == CGICmd::COMMON::OFF) {
+            state = state_t::MANUAL;
+        }
+
+        return state;
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // ND.
+    // void set_imaging_ExposureAutoNDFilterEnable(CGICmd::COMMON::em_OnOff val)
+    // {
+    //     std::string msg;
+    //     auto str = json_conv_enum2str(val);
+    //     msg = "ExposureAutoNDFilterEnable=" + str;
+    //     set_command<CGICmd::st_Imaging>(msg);
+    // }
+
+    // void set_imaging_ExposureNDClear(CGICmd::em_ExposureNDClear val)
+    // {
+    //     std::string msg;
+    //     auto str = json_conv_enum2str(val);
+    //     msg = "ExposureNDClear=" + str;
+    //     set_command<CGICmd::st_Imaging>(msg);
+    // }
+
+    void set_imaging_ExposureNDVariable(int val)
+    {
+        std::string msg;
+        msg = "ExposureNDVariable=" + std::to_string(val);
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    void set_nd_mode_state(CGICmd::em_NDModeState state)
+    {
+        using state_t = CGICmd::em_NDModeState;
+
+        std::string msg;
+        switch (state) {
+        case state_t::AUTO:
+            {
+                auto str_nd_clear = json_conv_enum2str(CGICmd::ExposureNDClear_FILTERED);
+                auto str_nd_auto = json_conv_enum2str(CGICmd::COMMON::ON);
+                msg = "ExposureNDClear=" + str_nd_clear + "&" + "ExposureAutoNDFilterEnable=" + str_nd_auto;
+            }
+            break;
+ 
+        case state_t::MANUAL:
+            {
+                auto str_nd_clear = json_conv_enum2str(CGICmd::ExposureNDClear_FILTERED);
+                auto str_nd_auto = json_conv_enum2str(CGICmd::COMMON::OFF);
+                msg = "ExposureNDClear=" + str_nd_clear + "&" + "ExposureAutoNDFilterEnable=" + str_nd_auto;
+            }
+            break;
+ 
+        case state_t::CLEAR:
+            {
+                auto str_nd_clear = json_conv_enum2str(CGICmd::ExposureNDClear_CLEAR);
+                msg = "ExposureNDClear=" + str_nd_clear;
+            }
+            break;
+ 
+        case state_t::INVALID:
+        default:
+            return;
+        }
+
+        set_command<CGICmd::st_Imaging>(msg);
+    }
+
+    CGICmd::em_NDModeState get_nd_mode_state() const
+    {
+        using state_t = CGICmd::em_NDModeState;
+        state_t state = state_t::INVALID;
+
+        auto is_auto = (cmd_info.imaging.ExposureAutoNDFilterEnable == CGICmd::COMMON::ON);
+        auto is_clear = (cmd_info.imaging.ExposureNDClear == CGICmd::ExposureNDClear_CLEAR);
+
+        if (is_clear) {
+            state = state_t::CLEAR;
+        } else if (is_auto) {
+            state = state_t::AUTO;
+        } else {
             state = state_t::MANUAL;
         }
 
