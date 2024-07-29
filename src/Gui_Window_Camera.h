@@ -277,7 +277,7 @@ private:
         set_style_color(0.0f / 7.0f);
 
         std::string str = "REC";
-        if (ImGui::Button(str.c_str())) {
+        if (ImGui::Button(str.c_str()) || ImGui::IsKeyPressed(ImGuiKey_Space, false)) {
             cgi->click_cameraoperation_MediaRecording();
         }
 
