@@ -135,11 +135,16 @@ private:
         for (auto &[k, v] : remote_server_info_DB) {
             ImGui::PushID(k.c_str());
 
+            ImGuiStyle& style = ImGui::GetStyle();
+            const auto text_size = ImGui::CalcTextSize("255.255.255.255:65535/[SRT]Listener");
+            const auto pad_frame = style.FramePadding;
+            const ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+
             auto &rs = v.remote_server;
             std::string str = rs.ip_address + ":" + rs.port + " / [SRT]" + (rs.is_srt_listener ? "Listener" : "Caller");
     
             set_style_color(2.0f / 7.0f);
-            if (ImGui::Button(str.c_str())) {
+            if (ImGui::Button(str.c_str(), btn_size)) {
                 auto &gui_win_camera = v.handle;
                 if (!gui_win_camera) {
                     gui_win_camera = std::make_unique<Gui_Window_Camera>(win_w, win_h, v.remote_server);
