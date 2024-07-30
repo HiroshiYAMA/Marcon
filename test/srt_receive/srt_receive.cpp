@@ -41,7 +41,11 @@ int main(int ac, char *av[])
     ss << "h264parse ! video/x-h264 ! ";
 #ifdef GST_NV
     ss << "nvv4l2decoder ! ";
+#ifdef JETSON
+    ss << "nvvidconv ! video/x-raw,width=" << w << ",height=" << h << " ! ";
+#else
     ss << "nvvideoconvert ! video/x-raw,width=" << w << ",height=" << h << " ! ";
+#endif
 #else
     ss << "avdec_h264 ! ";
     ss << "videoscale n-threads=" << th_num << " ! video/x-raw,width=" << w << ",height=" << h << " ! ";

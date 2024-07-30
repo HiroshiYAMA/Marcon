@@ -77,7 +77,11 @@ std::string make_gst_pipeline(const st_RemoteServer &remote_server)
     ss << "h264parse ! video/x-h264 ! ";
 #ifdef GST_NV
     ss << "nvv4l2decoder ! ";
+#ifdef JETSON
+    ss << "nvvidconv ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";
+#else
     ss << "nvvideoconvert ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";
+#endif
 #else
     ss << "avdec_h264 ! ";
     ss << "videoscale n-threads=" << thread_count << " ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";

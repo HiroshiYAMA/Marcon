@@ -42,5 +42,8 @@ target_link_libraries(${target} ${OpenCV_LIBRARIES})
 # using NVIDIA plugins of GStreamer.
 # target_compile_definitions(${target} PUBLIC GST_NV)
 
+# using NVIDIA Jetson.
+# target_compile_definitions(${target} PUBLIC JETSON)
+
 ## Install path defined in parent CMakeLists
 install(TARGETS ${target} DESTINATION ${exe_install_path})
