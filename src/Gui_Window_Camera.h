@@ -579,6 +579,17 @@ private:
 
         auto &imaging = cgi->inquiry_imaging();
 
+        auto &style = ImGui::GetStyle();
+        auto frm_padding = style.FramePadding;
+        auto win_size = ImGui::GetWindowSize();
+
+        auto btn_width = win_size.x / 3 - frm_padding.x * 2;
+        auto btn_size = ImVec2(btn_width, 0);
+
+        auto left_x = win_size.x / 6 - btn_width / 2;
+        auto center_x = left_x + win_size.x / 3;
+        auto right_x = center_x + win_size.x / 3;
+
         if (ImGui::BeginTable("main", 1, tbl_flags))
         {
             auto p = ImGui::GetCursorScreenPos();
@@ -605,10 +616,11 @@ private:
                                 if (ImGui::BeginChild("main_top_left", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("FPS") || ImGui::IsKeyPressed(ImGuiKey_W, false));
+                                    ImGui::SetCursorScreenPos(ImVec2(left_x, p.y));
+                                    auto is_press = (ImGui::Button("FPS", btn_size) || ImGui::IsKeyPressed(ImGuiKey_W, false));
 
-                                    show_panel_fps_mode_str();
-                                    show_panel_fps_video_format();
+                                    show_panel_fps_mode_str(true);
+                                    show_panel_fps_video_format(true);
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##FPS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -628,22 +640,23 @@ private:
                                 if (ImGui::BeginChild("main_top_center", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("ISO") || ImGui::IsKeyPressed(ImGuiKey_E, false));
+                                    ImGui::SetCursorScreenPos(ImVec2(center_x, p.y));
+                                    auto is_press = (ImGui::Button("ISO", btn_size) || ImGui::IsKeyPressed(ImGuiKey_E, false));
 
-                                    show_panel_iso_mode_str();
+                                    show_panel_iso_mode_str(true);
 
                                     auto &imaging = cgi->inquiry_imaging();
                                     auto is_agc = imaging.ExposureAGCEnable == CGICmd::COMMON::ON;
-                                    if (is_agc) show_panel_iso_agc_str();
+                                    if (is_agc) show_panel_iso_agc_str(true);
 
                                     auto state = cgi->get_iso_mode_state();
                                     if (state == CGICmd::em_ISOModeState::GAIN) {
-                                        show_panel_iso_base_sensitivity_str();
+                                        show_panel_iso_base_sensitivity_str(true);
                                     } else if (state != CGICmd::em_ISOModeState::INVALID) {
-                                        show_panel_iso_base_iso_str();
+                                        show_panel_iso_base_iso_str(true);
                                     }
 
-                                    show_panel_iso_value();
+                                    show_panel_iso_value(true);
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##ISO", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -663,10 +676,11 @@ private:
                                 if (ImGui::BeginChild("main_top_right", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("Shutter") || ImGui::IsKeyPressed(ImGuiKey_R, false));
+                                    ImGui::SetCursorScreenPos(ImVec2(right_x, p.y));
+                                    auto is_press = (ImGui::Button("Shutter", btn_size) || ImGui::IsKeyPressed(ImGuiKey_R, false));
 
-                                    show_panel_shutter_mode_str();
-                                    show_panel_shutter_value();
+                                    show_panel_shutter_mode_str(true);
+                                    show_panel_shutter_value(true);
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##Shutter", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -744,12 +758,13 @@ private:
                                 if (ImGui::BeginChild("main_bottom_left", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("ND") || ImGui::IsKeyPressed(ImGuiKey_X, false));
+                                    ImGui::SetCursorScreenPos(ImVec2(left_x, p.y));
+                                    auto is_press = (ImGui::Button("ND", btn_size) || ImGui::IsKeyPressed(ImGuiKey_X, false));
 
-                                    show_panel_nd_mode_str();
+                                    show_panel_nd_mode_str(true);
                                     auto state = cgi->get_nd_mode_state();
                                     if (state == CGICmd::em_NDModeState::AUTO || state == CGICmd::em_NDModeState::MANUAL) {
-                                        show_panel_nd_value();
+                                        show_panel_nd_value(true);
                                     }
 
                                     ImGui::SetCursorScreenPos(p);
@@ -770,10 +785,11 @@ private:
                                 if (ImGui::BeginChild("main_bottom_center", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("IRIS") || ImGui::IsKeyPressed(ImGuiKey_C, false));
+                                    ImGui::SetCursorScreenPos(ImVec2(center_x, p.y));
+                                    auto is_press = (ImGui::Button("IRIS", btn_size) || ImGui::IsKeyPressed(ImGuiKey_C, false));
 
-                                    show_panel_iris_mode_str();
-                                    show_panel_iris_fnumber_str();
+                                    show_panel_iris_mode_str(true);
+                                    show_panel_iris_fnumber_str(true);
                                     // show_panel_iris_value();
 
                                     ImGui::SetCursorScreenPos(p);
@@ -794,10 +810,11 @@ private:
                                 if (ImGui::BeginChild("main_bottom_right", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
-                                    auto is_press = (ImGui::Button("WB") || ImGui::IsKeyPressed(ImGuiKey_V, false));
+                                    ImGui::SetCursorScreenPos(ImVec2(right_x, p.y));
+                                    auto is_press = (ImGui::Button("WB", btn_size) || ImGui::IsKeyPressed(ImGuiKey_V, false));
 
-                                    show_panel_wb_mode_str();
-                                    show_panel_wb_value();
+                                    show_panel_wb_mode_str(true);
+                                    show_panel_wb_value(true);
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##WB", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
