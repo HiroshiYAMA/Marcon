@@ -436,7 +436,7 @@ private:
 
                         } else {
                             style.FrameBorderSize = 0.0f;
-                            set_style_color(5.0f, 0.1f, 0.1f);
+                            set_style_color(5.0f, 0.1f, 0.1f, 0.0f);
 
                             ImGui::Button(v.c_str(), ImVec2(-1, 0));
 

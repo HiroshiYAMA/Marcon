@@ -157,9 +157,9 @@ inline auto is_mouse_drag_to_right = [](ImGuiMouseButton button) -> std::tuple<b
 
 
 // ボタンの色(In-Active, Hovered, Active)を設定する //
-extern void set_style_color(float hue, float sat, float val);
-extern void set_style_color(float hue);
-extern void set_style_color_inactive(float hue);
+extern void set_style_color(float hue, float sat, float val, float a = 1.0f);
+extern void set_style_color(float hue, float a = 1.0f);
+extern void set_style_color_inactive(float hue, float a = 1.0f);
 
 // ボタンの色設定を戻す(In-Active, Hovered, Active) //
 extern void reset_style_color();

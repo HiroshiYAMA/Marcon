@@ -373,19 +373,19 @@ void display_texture(GLuint texID, GLsizei width, GLsizei height, std::string ti
 }
 
 // ボタンの色(In-Active, Hovered, Active)を設定する //
-void set_style_color(float hue, float sat, float val)
+void set_style_color(float hue, float sat, float val, float a)
 {
-    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(hue, sat, val));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(hue, sat, val));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(hue, sat, val));
+    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(hue, sat, val, a));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(hue, sat, val, a));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(hue, sat, val, a));
 }
-void set_style_color(float hue)
+void set_style_color(float hue, float a)
 {
-    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(hue, 0.5f, 0.5f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(hue, 0.7f, 0.7f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(hue, 0.9f, 0.9f));
+    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(hue, 0.5f, 0.5f, a));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(hue, 0.7f, 0.7f, a));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(hue, 0.9f, 0.9f, a));
 }
-void set_style_color_inactive(float hue)
+void set_style_color_inactive(float hue, float a)
 {
     ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(hue, 0.1f, 0.5f));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(hue, 0.1f, 0.5f));
