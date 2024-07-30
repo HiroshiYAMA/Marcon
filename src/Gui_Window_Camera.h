@@ -425,6 +425,7 @@ private:
 
                     auto fb = style.FrameBorderSize;
 
+                    ImGui::SetWindowFontScale(1.5f);
                     for (auto &[k, v]: vec) {
                         if (k == idx) {
                             set_style_color(4.0f / 7.0f, 0.9f, 0.9f);
@@ -444,6 +445,7 @@ private:
                             style.FrameBorderSize = fb;
                         }
                     }
+                    ImGui::SetWindowFontScale(1.0f);
 
                     style.FrameRounding = fr;
                     style.GrabRounding = gr;
@@ -583,12 +585,15 @@ private:
         auto frm_padding = style.FramePadding;
         auto win_size = ImGui::GetWindowSize();
 
-        auto btn_width = win_size.x / 3 - frm_padding.x * 2;
+        auto btn_width = win_size.x / 3 - frm_padding.x * 4;
         auto btn_size = ImVec2(btn_width, 0);
 
         auto left_x = win_size.x / 6 - btn_width / 2;
         auto center_x = left_x + win_size.x / 3;
         auto right_x = center_x + win_size.x / 3;
+
+        constexpr auto font_scale = 1.5f;
+        auto spacing = []() { ImGui::Text(" "); ImGui::SameLine(); };
 
         if (ImGui::BeginTable("main", 1, tbl_flags))
         {
@@ -602,6 +607,7 @@ private:
                 ImGui::TableNextColumn();
 
                 if (row == 0) {
+                    ImGui::SetWindowFontScale(font_scale);
                     if (ImGui::BeginTable("main_top", 3, ImGuiTableFlags_BordersInnerV))
                     {
                         for (int row = 0; row < 1; row++)
@@ -619,8 +625,8 @@ private:
                                     ImGui::SetCursorScreenPos(ImVec2(left_x, p.y));
                                     auto is_press = (ImGui::Button("FPS", btn_size) || ImGui::IsKeyPressed(ImGuiKey_W, false));
 
-                                    show_panel_fps_mode_str(true);
-                                    show_panel_fps_video_format(true);
+                                    spacing(); show_panel_fps_mode_str();
+                                    spacing(); show_panel_fps_video_format();
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##FPS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -640,23 +646,30 @@ private:
                                 if (ImGui::BeginChild("main_top_center", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
                                     auto p = ImGui::GetCursorScreenPos();
 
+                                    auto idx = cgi->get_iso_mode_state();
+                                    auto &vec = iso_mode_state;
+                                    std::string mode_str = get_string_from_pair_list(vec, idx);
+
                                     ImGui::SetCursorScreenPos(ImVec2(center_x, p.y));
-                                    auto is_press = (ImGui::Button("ISO", btn_size) || ImGui::IsKeyPressed(ImGuiKey_E, false));
+                                    auto is_press = (ImGui::Button(mode_str.c_str(), btn_size) || ImGui::IsKeyPressed(ImGuiKey_E, false));
 
-                                    show_panel_iso_mode_str(true);
-
-                                    auto &imaging = cgi->inquiry_imaging();
-                                    auto is_agc = imaging.ExposureAGCEnable == CGICmd::COMMON::ON;
-                                    if (is_agc) show_panel_iso_agc_str(true);
-
+                                    spacing();
                                     auto state = cgi->get_iso_mode_state();
                                     if (state == CGICmd::em_ISOModeState::GAIN) {
-                                        show_panel_iso_base_sensitivity_str(true);
+                                        show_panel_iso_base_sensitivity_str();
                                     } else if (state != CGICmd::em_ISOModeState::INVALID) {
-                                        show_panel_iso_base_iso_str(true);
+                                        show_panel_iso_base_iso_str();
                                     }
 
-                                    show_panel_iso_value(true);
+                                    spacing();
+                                    auto &imaging = cgi->inquiry_imaging();
+                                    auto is_agc = imaging.ExposureAGCEnable == CGICmd::COMMON::ON;
+                                    if (is_agc) {
+                                        show_panel_iso_agc_str(); ImGui::SameLine();
+                                        ImGui::Text(":"); ImGui::SameLine();
+                                    }
+
+                                    show_panel_iso_value();
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##ISO", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -679,8 +692,8 @@ private:
                                     ImGui::SetCursorScreenPos(ImVec2(right_x, p.y));
                                     auto is_press = (ImGui::Button("Shutter", btn_size) || ImGui::IsKeyPressed(ImGuiKey_R, false));
 
-                                    show_panel_shutter_mode_str(true);
-                                    show_panel_shutter_value(true);
+                                    spacing(); show_panel_shutter_mode_str();
+                                    spacing(); show_panel_shutter_value();
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##Shutter", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -694,6 +707,7 @@ private:
                         }
                         ImGui::EndTable();
                     }
+                    ImGui::SetWindowFontScale(1.0f);
 
                 } else if (row == 1) {
                     if (ImGui::BeginTable("main_middle", 2, ImGuiTableFlags_BordersInnerV))
@@ -718,7 +732,9 @@ private:
                                 ImGui::SetWindowFontScale(1.0f);
 
                                 // movie rec.
+                                ImGui::SetWindowFontScale(font_scale);
                                 show_panel_movie_rec();
+                                ImGui::SetWindowFontScale(1.0f);
                             }
 
                             ///////////////////////////////////////////////////////////////////////
@@ -744,6 +760,7 @@ private:
                     }
 
                 } else if (row == 2) {
+                    ImGui::SetWindowFontScale(font_scale);
                     if (ImGui::BeginTable("main_bottom", 3, ImGuiTableFlags_BordersInnerV))
                     {
                         for (int row = 0; row < 1; row++)
@@ -761,10 +778,10 @@ private:
                                     ImGui::SetCursorScreenPos(ImVec2(left_x, p.y));
                                     auto is_press = (ImGui::Button("ND", btn_size) || ImGui::IsKeyPressed(ImGuiKey_X, false));
 
-                                    show_panel_nd_mode_str(true);
+                                    spacing(); show_panel_nd_mode_str();
                                     auto state = cgi->get_nd_mode_state();
                                     if (state == CGICmd::em_NDModeState::AUTO || state == CGICmd::em_NDModeState::MANUAL) {
-                                        show_panel_nd_value(true);
+                                        spacing(); show_panel_nd_value();
                                     }
 
                                     ImGui::SetCursorScreenPos(p);
@@ -788,8 +805,8 @@ private:
                                     ImGui::SetCursorScreenPos(ImVec2(center_x, p.y));
                                     auto is_press = (ImGui::Button("IRIS", btn_size) || ImGui::IsKeyPressed(ImGuiKey_C, false));
 
-                                    show_panel_iris_mode_str(true);
-                                    show_panel_iris_fnumber_str(true);
+                                    spacing(); show_panel_iris_mode_str();
+                                    spacing(); show_panel_iris_fnumber_str();
                                     // show_panel_iris_value();
 
                                     ImGui::SetCursorScreenPos(p);
@@ -813,8 +830,8 @@ private:
                                     ImGui::SetCursorScreenPos(ImVec2(right_x, p.y));
                                     auto is_press = (ImGui::Button("WB", btn_size) || ImGui::IsKeyPressed(ImGuiKey_V, false));
 
-                                    show_panel_wb_mode_str(true);
-                                    show_panel_wb_value(true);
+                                    spacing(); show_panel_wb_mode_str();
+                                    spacing(); show_panel_wb_value();
 
                                     ImGui::SetCursorScreenPos(p);
                                     is_press |= ImGui::InvisibleButton("##WB", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
@@ -828,6 +845,7 @@ private:
                         }
                         ImGui::EndTable();
                     }
+                    ImGui::SetWindowFontScale(1.0f);
                 }
             }
             ImGui::EndTable();
@@ -995,12 +1013,14 @@ private:
             auto p = ImGui::GetCursorScreenPos();
             auto sz = ImGui::GetWindowSize();
             auto text_height = ImGui::GetTextLineHeightWithSpacing();
-            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 1.5);
+            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 2.25);
             ImGui::SetCursorScreenPos(p_center);
         }
+        ImGui::SetWindowFontScale(1.5f);
         show_panel_iris_mode_str(true);
         show_panel_iris_fnumber_str(true);
         show_panel_iris_value(true);
+        ImGui::SetWindowFontScale(1.0f);
     }
 
     iris_list_t gen_iris_list(int idx_max, int idx_min)
@@ -1363,13 +1383,15 @@ private:
                 auto p = ImGui::GetCursorScreenPos();
                 auto sz = ImGui::GetWindowSize();
                 auto text_height = ImGui::GetTextLineHeightWithSpacing();
-                auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 2);
+                auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 3);
                 ImGui::SetCursorScreenPos(p_center);
             }
+            ImGui::SetWindowFontScale(1.5f);
             show_panel_iso_mode_str(true);
             show_panel_iso_agc_str(true);
             show_panel_iso_base_sensitivity_str(true);
             show_panel_iso_value(true);
+            ImGui::SetWindowFontScale(1.0f);
 
         } else {
             auto f = [&](int val) -> void { cgi->set_imaging_ExposureGain(val); };
@@ -1399,13 +1421,15 @@ private:
                 auto p = ImGui::GetCursorScreenPos();
                 auto sz = ImGui::GetWindowSize();
                 auto text_height = ImGui::GetTextLineHeightWithSpacing();
-                auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 2);
+                auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 3);
                 ImGui::SetCursorScreenPos(p_center);
             }
+            ImGui::SetWindowFontScale(1.5f);
             show_panel_iso_mode_str(true);
             show_panel_iso_agc_str(true);
             show_panel_iso_base_iso_str(true);
             show_panel_iso_value(true);
+            ImGui::SetWindowFontScale(1.0f);
 
         } else {
             auto f = [&](int val) -> void { cgi->set_imaging_ExposureISO(val); };
@@ -1706,11 +1730,13 @@ private:
                     auto p = ImGui::GetCursorScreenPos();
                     auto sz = ImGui::GetWindowSize();
                     auto text_height = ImGui::GetTextLineHeightWithSpacing();
-                    auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height);
+                    auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 1.5f);
                     ImGui::SetCursorScreenPos(p_center);
                 }
+                ImGui::SetWindowFontScale(1.5f);
                 show_panel_shutter_mode_str(true);
                 show_panel_shutter_value(true);
+                ImGui::SetWindowFontScale(1.0f);
 
                 ImGui::TableSetColumnIndex(2);
                 show_panel_live_view_with_info();
@@ -1876,11 +1902,13 @@ private:
                     auto p = ImGui::GetCursorScreenPos();
                     auto sz = ImGui::GetWindowSize();
                     auto text_height = ImGui::GetTextLineHeightWithSpacing();
-                    auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height);
+                    auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 1.5f);
                     ImGui::SetCursorScreenPos(p_center);
                 }
+                ImGui::SetWindowFontScale(1.5f);
                 show_panel_shutter_mode_str(true);
                 show_panel_shutter_value(true);
+                ImGui::SetWindowFontScale(1.0f);
 
                 ImGui::TableSetColumnIndex(2);
                 show_panel_live_view_with_info();
@@ -2074,11 +2102,13 @@ private:
                     auto p = ImGui::GetCursorScreenPos();
                     auto sz = ImGui::GetWindowSize();
                     auto text_height = ImGui::GetTextLineHeightWithSpacing();
-                    auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height);
+                    auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 1.5f);
                     ImGui::SetCursorScreenPos(p_center);
                 }
+                ImGui::SetWindowFontScale(1.5f);
                 show_panel_wb_mode_str(true);
                 show_panel_wb_value(true);
+                ImGui::SetWindowFontScale(1.0f);
 
                 ImGui::TableSetColumnIndex(2);
                 show_panel_live_view_with_info();
@@ -2274,11 +2304,13 @@ private:
             auto p = ImGui::GetCursorScreenPos();
             auto sz = ImGui::GetWindowSize();
             auto text_height = ImGui::GetTextLineHeightWithSpacing();
-            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 1.0f);
+            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 1.5f);
             ImGui::SetCursorScreenPos(p_center);
         }
+        ImGui::SetWindowFontScale(1.5f);
         show_panel_nd_mode_str(true);
         show_panel_nd_value(true);
+        ImGui::SetWindowFontScale(1.0f);
     }
 
     void show_panel_nd_control_manual()
@@ -2307,10 +2339,12 @@ private:
             auto p = ImGui::GetCursorScreenPos();
             auto sz = ImGui::GetWindowSize();
             auto text_height = ImGui::GetTextLineHeightWithSpacing();
-            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 0.5f);
+            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 0.75f);
             ImGui::SetCursorScreenPos(p_center);
         }
+        ImGui::SetWindowFontScale(1.5f);
         show_panel_nd_mode_str(true);
+        ImGui::SetWindowFontScale(1.0f);
     }
 
     void show_panel_nd_control_sub(CGICmd::em_NDModeState state)
@@ -2429,19 +2463,21 @@ private:
             auto p = ImGui::GetCursorScreenPos();
             auto sz = ImGui::GetWindowSize();
             auto text_height = ImGui::GetTextLineHeightWithSpacing();
-            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 3.0f);
+            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 4.5f);
             ImGui::SetCursorScreenPos(p_center);
         }
         {
-            constexpr auto btn_scale = 2.0f;
+            constexpr auto btn_scale = 3.0f;
             ImGui::SetWindowFontScale(btn_scale);
             std::string str = "KJC";
             centering_text_pos(str.c_str());
             ImGui::TextColored(ImVec4(1, 1, 0, 1), "%s", str.c_str());
             ImGui::SetWindowFontScale(1.0f);
         }
+        ImGui::SetWindowFontScale(1.5f);
         show_panel_fps_mode_str(true);
         show_panel_fps_video_format(true);
+        ImGui::SetWindowFontScale(1.0f);
 
         if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
             stat_main = em_State::MAIN;
