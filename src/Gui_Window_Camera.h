@@ -817,7 +817,7 @@ private:
         }
 
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-            ret = false;
+            // ret = false; // disable ESC.
         } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
             stat_main_bkup = stat_main;
             stat_main = em_State::LIVE_VIEW;
