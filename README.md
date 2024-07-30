@@ -99,13 +99,33 @@ W キーが有効な時(MODE(another)がある時)は、
 
 ### (Launcher パネル) アプリケーションの終了
 ぐちゃぐちゃぐちゃ～っとマウスをドラッグするかタッチパネルをこすると
-アプリケーションを終了する。5秒間くらいかな。
+アプリケーションを終了する。
+左右に 5 往復くらいかな。
 
 ## Ubuntu のディスプレイ表示の回転
 時々、ディスプレイ表示が縦長なのがある。
 それを横長にするには、
 [ここの Web サイト](http://bluearth.cocolog-nifty.com/blog/2019/12/post-e5f4f1.html)
 を参考すると良い。
+
+右回転のスクリプトはこれ。
+適宜、LCDのデバイス名(例、***WaveShare WS170120***)は変更してね。
+```bash
+#!/bin/bash
+
+SLEEP_SEC=${1:-0}
+
+sleep ${SLEEP_SEC}
+
+export DISPLAY=:0.0
+
+# display rotation.
+xrandr --output HDMI-0 --rotate right
+
+# pointing device rotation.
+LCD_ID=$(xinput | grep 'WaveShare WS170120' | perl -pe 's/^.*\Wid=([0-9]+)\W.*$/${1}/')
+xinput set-prop ${LCD_ID} 'Coordinate Transformation Matrix' 0 1 0 -1 0 1 0 0 1
+```
 
 ## テストプログラムたち
 test ディレクトリ以下に置いてある。
