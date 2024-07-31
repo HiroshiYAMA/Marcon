@@ -95,6 +95,12 @@ private:
         {
             if (ImGui::BeginMenu("Menu"))
             {
+                if (ImGui::BeginMenu("Change skin")) {
+                    if (ImGui::MenuItem("Dark", NULL)) { ImGui::StyleColorsDark(); }
+                    if (ImGui::MenuItem("Light", NULL)) { ImGui::StyleColorsLight(); }
+                    if (ImGui::MenuItem("Classic", NULL)) { ImGui::StyleColorsClassic(); }
+                    ImGui::EndMenu();
+                }
                 if (ImGui::MenuItem("Demoru?", NULL)) { show_demo_window = true; }
                 if (ImGui::MenuItem("Quit", NULL)) { is_loop = false; }
                 ImGui::EndMenu();
