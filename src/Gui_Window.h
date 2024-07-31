@@ -428,7 +428,7 @@ public:
 
             if (state == em_State::LANCHER) {
                 // display launcher window.
-                is_loop = display_launcher_window();
+                is_loop &= display_launcher_window();
 
             } else if (state == em_State::CAMERA_CONTROL) {
                 // display control window.
