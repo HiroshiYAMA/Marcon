@@ -173,6 +173,7 @@ private:
             if (ImGui::Button("Delete")) {
                 remote_server_info_DB.erase(k);
 
+                reset_style_color();
                 ImGui::PopID();
                 break;
             }
