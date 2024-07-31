@@ -127,6 +127,12 @@ LCD_ID=$(xinput | grep 'WaveShare WS170120' | perl -pe 's/^.*\Wid=([0-9]+)\W.*$/
 xinput set-prop ${LCD_ID} 'Coordinate Transformation Matrix' 0 1 0 -1 0 1 0 0 1
 ```
 
+## GUI のスキン変更
+起動直後の表示パネルの最上部左寄りに **"Menu"** があるので、
+そこの **"Change skin"** から適宜選択する。
+
+<img src="images/Marcon_Menu.jpg" width="75%">
+
 ## テストプログラムたち
 test ディレクトリ以下に置いてある。
 * [cgi_test](./test/cgi_test/)
