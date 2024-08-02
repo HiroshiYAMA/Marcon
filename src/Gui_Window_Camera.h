@@ -188,6 +188,8 @@ private:
 
     st_RemoteServer remote_server = {};
 
+    CGICmd::em_StreamMode stream_mode_bkup;
+
     em_State stat_main = em_State::MAIN;
     em_State stat_main_bkup = em_State::MAIN;
 
@@ -2919,6 +2921,7 @@ public:
                     CGICmd::st_Stream stream = {};
                     cgi->inquiry(stream);
                     if (stream.StreamMode != CGICmd::StreamMode_SRT_LISTENER) {
+                        stream_mode_bkup = stream.StreamMode;
                         cgi->set_stream_StreamMode(CGICmd::StreamMode_SRT_LISTENER);
                         int retry_count = 6;
                         do {
@@ -3028,6 +3031,8 @@ public:
 
     bool DISCONNECT()
     {
+        cgi->set_stream_StreamMode(stream_mode_bkup);
+
         if (proc_live_view) {
             if (proc_live_view->is_running()) proc_live_view->stop();
             if (thd_proc_live_view.joinable()) thd_proc_live_view.join();
