@@ -45,8 +45,7 @@
 // #include <mutex>
 // #include <atomic>
 
-#define CPPHTTPLIB_OPENSSL_SUPPORT
-#include <httplib.h>
+#include <cpr/cpr.h>
 
 #include <json.hpp>
 using njson = nlohmann::json;

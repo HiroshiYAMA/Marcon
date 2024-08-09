@@ -2876,6 +2876,7 @@ public:
             if (ImGui::Button("Login")) {
                 cgi->set_account(remote_server.username, remote_server.password);
                 camera_connection_stat.store(em_Camera_Connection_State::CONNECTED);
+                ImGui::SameLine(); ImGui::TextColored(ImVec4{1, 1, 0, 1}, "Now trying login..... Please wait");
             }
         }
         ImGui::End();
@@ -2916,7 +2917,7 @@ public:
 
             // Run Live View thread.
             if (!thd_proc_live_view.joinable()) {
-                if (cgi->is_update_cmd_info()) {
+                {
                     // SRT-Listener ?
                     CGICmd::st_Stream stream = {};
                     cgi->inquiry(stream);

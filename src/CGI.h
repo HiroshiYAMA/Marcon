@@ -551,7 +551,10 @@ class CGI
 {
 private:
     // HTTP
-    std::unique_ptr<httplib::Client> client;
+    cpr::Url cgi_url;
+	cpr::Authentication cgi_auth;
+	cpr::Header cgi_header;
+
 
     // command.
     bool auth;
@@ -601,13 +604,12 @@ private:
 public:
     CGI() = delete;
     CGI(const std::string &ip_address, int port, const std::string &id = "", const std::string &pw = "")
+        : cgi_url(cpr::Url{ ip_address + std::to_string(port) })
+        , cgi_auth(cpr::Authentication{ id, pw, cpr::AuthMode::DIGEST })
     {
-        client = std::make_unique<httplib::Client>(ip_address, port);
+        cgi_url = cpr::Url{ ip_address + ":" + std::to_string(port) };
 
-        if (client) {
-            set_account(id, pw);
-            set_referer_message(ip_address, port);
-        }
+        set_referer_message(ip_address, port);
 
         auth = false;
 
@@ -650,7 +652,7 @@ public:
     {
         std::lock_guard<std::mutex> lg(mtx_auth);
 
-        client->set_digest_auth(id, pw);
+        cgi_auth = cpr::Authentication{ id, pw, cpr::AuthMode::DIGEST };
         auth = true;
     }
 
@@ -658,27 +660,31 @@ public:
     {
         auto referer_str = make_referer_message(server_adr, server_port);
 
-        client->set_default_headers({
-            { "Referer", referer_str }
-        });
+        cgi_header = cpr::Header{
+            { "Referer", referer_str },
+        };
+
     }
 
-    std::tuple<int, std::string> GET(const std::string &message)
+    std::tuple<long, std::string, std::string> GET(const std::string &message)
     {
         std::lock_guard<std::mutex> lg(mtx_auth);
 
-        if (!auth) return { 0, "" };
+        if (!auth) return { cpr::status::HTTP_UNAUTHORIZED, "", "" };
 
-        auto res = client->Get(message);
+		auto ar = cpr::GetAsync(cgi_url + message, cgi_auth, cgi_header);
+        auto wait_status = ar.wait_for(std::chrono::milliseconds(1000));
 
-        if (!res) return { 0, "" };
+        if (wait_status == std::future_status::timeout) return { cpr::status::HTTP_REQUEST_TIMEOUT, "", "" };
+        auto res = ar.get();
 
-        auto status = res->status;
-        auto body = res->body;
+        auto status = res.status_code;
+        auto reson = res.reason;
+        auto body = res.text;
 
-        if (status == httplib::StatusCode::Unauthorized_401) auth = false;
+        if (status == cpr::status::HTTP_UNAUTHORIZED) auth = false;
 
-        return { status, body };
+        return { status, reson, body };
     }
 
     template<typename T> void set_command(const std::string &param, const std::string &val)
@@ -1059,22 +1065,22 @@ public:
     // inquiry.
     template<typename T> void inquiry(T& val)
     {
+        if (!auth) return;
+
         std::string msg = "/command/inquiry.cgi?inqjson=";
         msg += T::cmd;
-        auto [s, r] = GET(msg);
+        auto [s, s_msg, r] = GET(msg);
 
-        if (s == 0 && r == "") return;
+        if (s == 0 && s_msg == "" && r == "") return;
 
-        auto s_msg = httplib::status_message(s);
         switch (s) {
-            using SC = httplib::StatusCode;
-
-        case SC::Unauthorized_401:
+        case cpr::status::HTTP_UNAUTHORIZED:
+        // case cpr::status::HTTP_REQUEST_TIMEOUT:
             std::cout << "ERROR (" << s << ") : " << s_msg << std::endl;
-            throw SC::Unauthorized_401;
+            auth = false;
             break;
 
-        case SC::OK_200:
+        case cpr::status::HTTP_OK:
         // case SC::Created_201:
         // case SC::Accepted_202:
         // case SC::NonAuthoritativeInformation_203:
@@ -1137,35 +1143,24 @@ public:
 
             st_CmdInfo cmdi = {};
 
-            try
-            {
-                inquiry(cmdi.system);
-                inquiry(cmdi.status);
-                inquiry(cmdi.imaging);
-                inquiry(cmdi.cameraoperation);
-                inquiry(cmdi.project);
-                inquiry(cmdi.network);
-                inquiry(cmdi.stream);
-                inquiry(cmdi.srt);
-            }
-            catch(const httplib::StatusCode &s)
-            {
-                if (s == httplib::StatusCode::Unauthorized_401) {
-                    auth = false;
-                }
-            }
-            catch(const std::exception& e)
-            {
-                std::cerr << e.what() << '\n';
-            }
+            inquiry(cmdi.system);
+            inquiry(cmdi.status);
+            inquiry(cmdi.imaging);
+            inquiry(cmdi.cameraoperation);
+            inquiry(cmdi.project);
+            inquiry(cmdi.network);
+            inquiry(cmdi.stream);
+            inquiry(cmdi.srt);
 
-            if (!is_send_set_cmd.load())
-            {
-                std::lock_guard<std::mutex> lg(mtx);
-                cmd_info_list->Write(cmdi);
-                is_update_cmd_info_list.store(true);
-            } else {
-                is_send_set_cmd.store(false);
+            if (auth) {
+                if (!is_send_set_cmd.load())
+                {
+                    std::lock_guard<std::mutex> lg(mtx);
+                    cmd_info_list->Write(cmdi);
+                    is_update_cmd_info_list.store(true);
+                } else {
+                    is_send_set_cmd.store(false);
+                }
             }
 
             tt.wait1period(1.0 / 60.0f);
@@ -1186,20 +1181,15 @@ public:
             auto msg = cmd_msg_list->Read();
             is_update_cmd_msg_list.store(false);
             if (!msg.empty()) {
-                try
-                {
-                    is_send_set_cmd.store(true);
-                    auto [s, r] = GET(msg);
+                is_send_set_cmd.store(true);
+                auto [s, s_msg, r] = GET(msg);
+
+                if (s == cpr::status::HTTP_UNAUTHORIZED) {
+                    auth = false;
                 }
-                catch(const httplib::StatusCode &s)
-                {
-                    if (s == httplib::StatusCode::Unauthorized_401) {
-                        auth = false;
-                    }
-                }
-                catch(const std::exception& e)
-                {
-                    std::cerr << e.what() << '\n';
+
+                if (s == cpr::status::HTTP_REQUEST_TIMEOUT) {
+                    std::cerr << "[run_set] Time Out" << std::endl;
                 }
             }
         }

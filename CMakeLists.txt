@@ -123,9 +123,20 @@ message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
 target_include_directories(${target} PUBLIC ${OPENSSL_INCLUDE_DIR})
 target_link_libraries(${target} ${OPENSSL_LIBRARIES} z)
 
-# cpp-httplib.
-set(CPP_HTTPLIB_INCLUDE_DIR "${EXTERNAL_DIR}/cpp-httplib")
-target_include_directories(${target} PUBLIC ${CPP_HTTPLIB_INCLUDE_DIR})
+# # cpp-httplib.
+# set(CPP_HTTPLIB_INCLUDE_DIR "${EXTERNAL_DIR}/cpp-httplib")
+# target_include_directories(${target} PUBLIC ${CPP_HTTPLIB_INCLUDE_DIR})
+
+# C++ Requests.
+set(BUILD_LIBCURL_DOCS OFF)
+set(BUILD_SHARED_LIBS OFF)
+set(BUILD_STATIC_CURL ON)
+set(BUILD_STATIC_LIBS ON)
+include(FetchContent)
+FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
+                         GIT_TAG 3b15fa82ea74739b574d705fea44959b58142eb8) # Replace with your desired git commit from: https://github.com/libcpr/cpr/releases
+FetchContent_MakeAvailable(cpr)
+target_link_libraries(${target} cpr::cpr)
 
 # using NVIDIA plugins of GStreamer.
 # target_compile_definitions(${target} PUBLIC GST_NV)
