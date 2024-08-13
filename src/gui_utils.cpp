@@ -28,6 +28,8 @@
 
 #include "gui_utils.h"
 
+em_GuiSkin gui_skin = em_GuiSkin::DARK;
+
 // visualized scale of display.
 float vis_xscale, vis_yscale;
 

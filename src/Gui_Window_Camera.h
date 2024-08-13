@@ -290,10 +290,10 @@ private:
         ImVec4 color;
         std::string status_str;
         if (is_rec) {
-            color = ImVec4{1, 0, 0, 1};
+            color = (gui_skin != em_GuiSkin::LIGHT) ? ImVec4{1, 0, 0, 1} : ImVec4{0.5f, 0, 0, 1};
             status_str = "Recording";
         } else {
-            color = ImVec4{0, 1, 0, 1};
+            color = (gui_skin != em_GuiSkin::LIGHT) ? ImVec4{0, 1, 0, 1} : ImVec4{0, 0.5f, 0, 1};
             status_str = "Not Recording";
         }
         ImGui::TextColored(color, "%s", status_str.c_str());
@@ -2473,7 +2473,8 @@ private:
             ImGui::SetWindowFontScale(btn_scale);
             std::string str = "KJC";
             centering_text_pos(str.c_str());
-            ImGui::TextColored(ImVec4(1, 1, 0, 1), "%s", str.c_str());
+            auto col = (gui_skin != em_GuiSkin::LIGHT) ? ImVec4{1, 1, 0, 1} : ImVec4{0.7f, 0.7f, 0, 1};
+            ImGui::TextColored(col, "%s", str.c_str());
             ImGui::SetWindowFontScale(1.0f);
         }
         ImGui::SetWindowFontScale(1.5f);
@@ -2876,6 +2877,8 @@ public:
             if (ImGui::Button("Login")) {
                 cgi->set_account(remote_server.username, remote_server.password);
                 camera_connection_stat.store(em_Camera_Connection_State::CONNECTED);
+                auto col = (gui_skin != em_GuiSkin::LIGHT) ? ImVec4{1, 1, 0, 1} : ImVec4{0.7f, 0.7f, 0, 1};
+                ImGui::SameLine(); ImGui::TextColored(col, "Now trying login..... Please wait");
             }
         }
         ImGui::End();
@@ -2916,14 +2919,19 @@ public:
 
             // Run Live View thread.
             if (!thd_proc_live_view.joinable()) {
-                if (cgi->is_update_cmd_info()) {
+                {
                     // SRT-Listener ?
                     CGICmd::st_Stream stream = {};
                     cgi->inquiry(stream);
+                    if (cgi->is_timeout() || !cgi->is_connected()) {
+                        is_window_opened = false;
+                        break;
+                    }
                     if (stream.StreamMode != CGICmd::StreamMode_SRT_LISTENER) {
                         stream_mode_bkup = stream.StreamMode;
                         cgi->set_stream_StreamMode(CGICmd::StreamMode_SRT_LISTENER);
-                        int retry_count = 6;
+                        constexpr auto RETRY_MAX = 60;
+                        int retry_count = RETRY_MAX;
                         do {
                             cgi->inquiry(stream);
                             retry_count--;

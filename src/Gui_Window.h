@@ -96,9 +96,9 @@ private:
             if (ImGui::BeginMenu("Menu"))
             {
                 if (ImGui::BeginMenu("Change skin")) {
-                    if (ImGui::MenuItem("Dark", NULL)) { ImGui::StyleColorsDark(); }
-                    if (ImGui::MenuItem("Light", NULL)) { ImGui::StyleColorsLight(); }
-                    if (ImGui::MenuItem("Classic", NULL)) { ImGui::StyleColorsClassic(); }
+                    if (ImGui::MenuItem("Dark", NULL)) { ImGui::StyleColorsDark(); gui_skin = em_GuiSkin::DARK; }
+                    if (ImGui::MenuItem("Light", NULL)) { ImGui::StyleColorsLight(); gui_skin = em_GuiSkin::LIGHT; }
+                    if (ImGui::MenuItem("Classic", NULL)) { ImGui::StyleColorsClassic(); gui_skin = em_GuiSkin::CLASSIC; }
                     ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Demoru?", NULL)) { show_demo_window = true; }
