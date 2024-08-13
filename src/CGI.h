@@ -555,9 +555,11 @@ private:
 	cpr::Authentication cgi_auth;
 	cpr::Header cgi_header;
 
+    bool connected;
 
     // command.
     bool auth;
+    bool timeout;
     struct st_CmdInfo
     {
         CGICmd::st_System system;
@@ -609,9 +611,12 @@ public:
     {
         cgi_url = cpr::Url{ ip_address + ":" + std::to_string(port) };
 
+        connected = false;
+
         set_referer_message(ip_address, port);
 
         auth = false;
+        timeout = false;
 
         running = true;
 
@@ -637,7 +642,9 @@ public:
     void start() { running = true; }
     void stop() { running = false; }
 
+    bool is_connected() const { return connected; }
     bool is_auth() const { return auth; }
+    bool is_timeout() const { return timeout; }
 
     bool empty_cmd_msg_list() const { return cmd_msg_list->empty(); }
     bool full_cmd_msg_list() const { return cmd_msg_list->full(); }
@@ -673,10 +680,24 @@ public:
         if (!auth) return { cpr::status::HTTP_UNAUTHORIZED, "", "" };
 
 		auto ar = cpr::GetAsync(cgi_url + message, cgi_auth, cgi_header);
-        auto wait_status = ar.wait_for(std::chrono::milliseconds(1000));
+        constexpr auto TIMEOUT_MS = 1000;
+        auto wait_status = ar.wait_for(std::chrono::milliseconds(TIMEOUT_MS));
 
-        if (wait_status == std::future_status::timeout) return { cpr::status::HTTP_REQUEST_TIMEOUT, "", "" };
+        if (wait_status == std::future_status::timeout) {
+            timeout = true;
+            return { 0, "", "" };
+        } else {
+            timeout = false;
+        }
+
         auto res = ar.get();
+
+        if (res.error.code == cpr::ErrorCode::CONNECTION_FAILURE) {
+            connected = false;
+            return { 0, "", "" };
+        } else {
+            connected = true;
+        }
 
         auto status = res.status_code;
         auto reson = res.reason;
@@ -1144,6 +1165,7 @@ public:
             st_CmdInfo cmdi = {};
 
             inquiry(cmdi.system);
+            if (timeout || !connected) continue;
             inquiry(cmdi.status);
             inquiry(cmdi.imaging);
             inquiry(cmdi.cameraoperation);

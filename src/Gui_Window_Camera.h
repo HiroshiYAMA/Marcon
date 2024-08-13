@@ -2921,10 +2921,15 @@ public:
                     // SRT-Listener ?
                     CGICmd::st_Stream stream = {};
                     cgi->inquiry(stream);
+                    if (cgi->is_timeout() || !cgi->is_connected()) {
+                        is_window_opened = false;
+                        break;
+                    }
                     if (stream.StreamMode != CGICmd::StreamMode_SRT_LISTENER) {
                         stream_mode_bkup = stream.StreamMode;
                         cgi->set_stream_StreamMode(CGICmd::StreamMode_SRT_LISTENER);
-                        int retry_count = 6;
+                        constexpr auto RETRY_MAX = 60;
+                        int retry_count = RETRY_MAX;
                         do {
                             cgi->inquiry(stream);
                             retry_count--;
