@@ -64,6 +64,13 @@ constexpr GLfloat tex_borderColor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 }
 
+enum class em_GuiSkin {
+    CLASSIC,
+    DARK,
+    LIGHT,
+};
+extern em_GuiSkin gui_skin;
+
 // visualized scale of display.
 extern float vis_xscale, vis_yscale;
 

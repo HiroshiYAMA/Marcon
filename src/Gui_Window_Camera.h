@@ -290,10 +290,10 @@ private:
         ImVec4 color;
         std::string status_str;
         if (is_rec) {
-            color = ImVec4{1, 0, 0, 1};
+            color = (gui_skin != em_GuiSkin::LIGHT) ? ImVec4{1, 0, 0, 1} : ImVec4{0.5f, 0, 0, 1};
             status_str = "Recording";
         } else {
-            color = ImVec4{0, 1, 0, 1};
+            color = (gui_skin != em_GuiSkin::LIGHT) ? ImVec4{0, 1, 0, 1} : ImVec4{0, 0.5f, 0, 1};
             status_str = "Not Recording";
         }
         ImGui::TextColored(color, "%s", status_str.c_str());
@@ -2473,7 +2473,8 @@ private:
             ImGui::SetWindowFontScale(btn_scale);
             std::string str = "KJC";
             centering_text_pos(str.c_str());
-            ImGui::TextColored(ImVec4(1, 1, 0, 1), "%s", str.c_str());
+            auto col = (gui_skin != em_GuiSkin::LIGHT) ? ImVec4{1, 1, 0, 1} : ImVec4{0.7f, 0.7f, 0, 1};
+            ImGui::TextColored(col, "%s", str.c_str());
             ImGui::SetWindowFontScale(1.0f);
         }
         ImGui::SetWindowFontScale(1.5f);
@@ -2876,7 +2877,8 @@ public:
             if (ImGui::Button("Login")) {
                 cgi->set_account(remote_server.username, remote_server.password);
                 camera_connection_stat.store(em_Camera_Connection_State::CONNECTED);
-                ImGui::SameLine(); ImGui::TextColored(ImVec4{1, 1, 0, 1}, "Now trying login..... Please wait");
+                auto col = (gui_skin != em_GuiSkin::LIGHT) ? ImVec4{1, 1, 0, 1} : ImVec4{0.7f, 0.7f, 0, 1};
+                ImGui::SameLine(); ImGui::TextColored(col, "Now trying login..... Please wait");
             }
         }
         ImGui::End();
