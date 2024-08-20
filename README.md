@@ -36,6 +36,7 @@ CMakeLists.txtの設定項目は以下のとおり。
 | 変数 **OPENSSL_ROOT_DIR** | OpenSSL v3 をインストールしているディレクトリを設定する |
 | **target_compile_definitions(${target} PUBLIC GST_NV)** | H.264 のデコードに GStreamer の NVIDIA プラグインを使う場合に有効にする |
 | **target_compile_definitions(${target} PUBLIC JETSON)** | NVIDIA Jetson でビルドする時に有効にする |
+| **target_compile_definitions(${target} PUBLIC GST_APPLE)** | H.264 のデコードに GStreamer の Apple VideoToolbox プラグインを使う場合に有効にする |
 
 ### ビルド手順
 ```bash
