@@ -34,6 +34,8 @@ struct st_RemoteServer
     bool is_srt_listener = false;
     std::string srt_port = {};
 
+    std::string nickname = {};
+
 public:
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(
         st_RemoteServer,
@@ -41,6 +43,8 @@ public:
         ip_address,
         port,
         username,
-        password
+        password,
+
+        nickname
     )
 };

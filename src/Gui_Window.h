@@ -29,6 +29,7 @@
 #include "common_utils.h"
 #include "gui_utils.h"
 #include "RemoteServer.h"
+#include "IpNetwork.h"
 
 namespace {
 
@@ -76,6 +77,9 @@ private:
 
     // cudaStream_t m_cuda_stream = NULL;
 
+    std::vector<st_NetInfo> net_info_list;
+    int idx_selected_net_info;
+
     std::map<std::string, st_RemoteServerInfo, std::less<>> remote_server_info_DB;
     st_RemoteServerInfo remote_server_info;
 
@@ -116,6 +120,49 @@ private:
 
         auto &rs_info = remote_server_info;
         auto &rs = rs_info.remote_server;
+
+        ImGui::SetWindowFontScale(1.5f);
+        if (ImGui::Button("Search")) {
+            net_info_list = search_ipadr();
+        }
+        ImGui::SameLine();
+
+        // list camera's IP adderss & Name.
+        if (net_info_list.size() > 0)
+        {
+            auto gen_item_str = [](const st_NetInfo &ni) -> std::string {
+                std::string str;
+                str = ni.nickname + "(" + ni.ipadr + ")";
+                return str;
+            };
+
+            ImGuiComboFlags flags = ImGuiComboFlags_None;
+            flags |= ImGuiComboFlags_NoPreview;
+            flags &= ~(ImGuiComboFlags_NoArrowButton | ImGuiComboFlags_WidthFitPreview);
+            std::string str_pre_val = "";
+            if (idx_selected_net_info >= 0 && idx_selected_net_info < net_info_list.size()) {
+                str_pre_val = gen_item_str(net_info_list[idx_selected_net_info]);
+            }
+            auto combo_preview_value = str_pre_val.c_str();
+            if (ImGui::BeginCombo("##NET_INFO_LIST", combo_preview_value, flags))
+            {
+                for (int n = 0; n < net_info_list.size(); n++)
+                {
+                    const bool is_selected = (idx_selected_net_info == n);
+                    std::string str = gen_item_str(net_info_list[n]);
+                    if (ImGui::Selectable(str.c_str(), is_selected)) {
+                        rs.ip_address = net_info_list[n].ipadr;
+                        rs.nickname = net_info_list[n].nickname;
+                        idx_selected_net_info = n;
+                    }
+                    if (is_selected) ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
+        }
+        ImGui::SameLine();
+        ImGui::SetWindowFontScale(1.0f);
+
         show_panel_input_ip_address("IP address", rs.ip_address, 10 * 13.0f, "IPv4 adress"); ImGui::SameLine();
         show_panel_input_port_number("Port number", rs.port, 4 * 13.0f); ImGui::SameLine();
         if (ImGui::Button("Add")) {
@@ -143,12 +190,12 @@ private:
             ImGui::PushID(k.c_str());
 
             ImGuiStyle& style = ImGui::GetStyle();
-            const auto text_size = ImGui::CalcTextSize("255.255.255.255:65535/[SRT]Listener");
+            const auto text_size = ImGui::CalcTextSize("(********) 255.255.255.255:65535/[SRT]Listener");
             const auto pad_frame = style.FramePadding;
             const ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
 
             auto &rs = v.remote_server;
-            std::string str = rs.ip_address + ":" + rs.port + " / [SRT]" + (rs.is_srt_listener ? "Listener" : "Caller");
+            std::string str = "(" + rs.nickname + ") " + rs.ip_address + ":" + rs.port + " / [SRT]" + (rs.is_srt_listener ? "Listener" : "Caller");
     
             set_style_color(2.0f / 7.0f);
             if (ImGui::Button(str.c_str(), btn_size)) {
@@ -346,6 +393,9 @@ public:
         // //     std::cout << "Failed getting CUDA Steram." << std::endl;
         //     m_cuda_stream = NULL;
         // // }
+
+        net_info_list = {};
+        idx_selected_net_info = -1;
 
         remote_server_info_DB = std::move(decltype(remote_server_info_DB){});
         remote_server_info = {};

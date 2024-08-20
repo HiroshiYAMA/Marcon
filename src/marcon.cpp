@@ -23,10 +23,13 @@
 
 #include "Gui_Window.h"
 #include "opencv_utils.h"
+#include "IpNetwork.h"
 
 // Main code
 int main(int ac, char *av[])
 {
+    init_search_ipadr();
+
     auto win_w = 800;
     auto win_h = 480;
 

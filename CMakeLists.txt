@@ -16,6 +16,7 @@ add_executable(${target}
     ${SRC_DIR}/gui_utils.cpp
     ${SRC_DIR}/CGI.cpp
     ${SRC_DIR}/CGI_cmd_parameter.cpp
+    ${SRC_DIR}/search_ipadr.cpp
 
     ${IMGUI_DIR}/imgui.cpp
     ${IMGUI_DIR}/imgui_demo.cpp
