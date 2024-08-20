@@ -1000,12 +1000,12 @@ protected:
 		return set_packet(pkt, receive_queue, latest);
 	}
 
+public:
 	size_t get_send_queue_size() const { return send_queue.size(); }
 	size_t get_receive_queue_size() const { return receive_queue.size(); }
 	bool is_empty_send_queue() const { return send_queue.empty(); }
 	bool is_empty_receive_queue() const { return receive_queue.empty(); }
 
-public:
 	template<typename T>
 	static std::unique_ptr<T> Create(const std::string &name, const std::string &service, em_Mode mode, bool is_caller, const std::string &mc_if, int mc_ttl, bool is_broadcast)
 	{

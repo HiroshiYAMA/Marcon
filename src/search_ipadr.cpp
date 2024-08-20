@@ -92,12 +92,19 @@ std::vector<st_NetInfo> search_ipadr()
 		constexpr auto COUNT = 30;
 		constexpr auto SEARCH_TIME = 1'000.0;	// [msec].
 		TinyTimer tt;
+		StopWatch sw;
+		auto time_over = [](auto sw) -> bool {
+			sw.stop();
+			auto dt_ms = sw.duration();
+			return (dt_ms > (SEARCH_TIME * 1.1));
+		};
+
 		int cnt = 0;
 		while (cnt++ < COUNT) {
-			if (ipnet->poll()) {
-				auto pkt = ipnet->receive();
+			while (ipnet->poll()) {
+				if (ipnet->is_empty_receive_queue()) break;
 
-				if (pkt) {
+				while (auto pkt = ipnet->receive()) {
 					net_info->unpack(*pkt);
 
 					st_NetInfo ni;
@@ -106,14 +113,13 @@ std::vector<st_NetInfo> search_ipadr()
 					ni.mac = net_info->get_netinfo_mac_address();
 					ip_adr_list.push_back(ni);
 
-				} else {
-					tt.wait1period(SEARCH_TIME / COUNT);
-					continue;
+					if (time_over(sw)) break;
 				}
 
-			} else {
-				tt.wait1period(SEARCH_TIME / COUNT);
+				if (time_over(sw)) break;
 			}
+
+			tt.wait1period(SEARCH_TIME / COUNT);
 		}
 	}
 	std::sort(ip_adr_list.begin(), ip_adr_list.end());
