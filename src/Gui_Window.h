@@ -133,6 +133,7 @@ private:
                 }
                 rs_info.handle.reset();
                 rs = {};
+                rs.port = "80";
             }
         }
 
