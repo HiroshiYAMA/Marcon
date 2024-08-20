@@ -410,10 +410,18 @@ static sockaddr_storage get_broadcast_address(const std::string &netif, sa_famil
 		if ((name == netif) && (family == net_family) && ((flags & flags_bit)) == flags_bit) {
 			switch (family) {
 			case AF_INET:
+#ifdef __APPLE__
+				*(sockaddr_in *)&sa = *((sockaddr_in *)ifa->ifa_dstaddr);
+#else
 				*(sockaddr_in *)&sa = *((sockaddr_in *)ifa->ifa_ifu.ifu_broadaddr);
+#endif
 				break;
 			case AF_INET6:
+#ifdef __APPLE__
+				*(sockaddr_in6 *)&sa = *((sockaddr_in6 *)ifa->ifa_dstaddr);
+#else
 				*(sockaddr_in6 *)&sa = *((sockaddr_in6 *)ifa->ifa_ifu.ifu_broadaddr);
+#endif
 				break;
 			default:
 				;
@@ -453,10 +461,18 @@ static std::list<sockaddr_storage> get_broadcast_address_list(sa_family_t net_fa
 			sockaddr_storage sa = {};
 			switch (family) {
 			case AF_INET:
+#ifdef __APPLE__
+				*(sockaddr_in *)&sa = *((sockaddr_in *)ifa->ifa_dstaddr);
+#else
 				*(sockaddr_in *)&sa = *((sockaddr_in *)ifa->ifa_ifu.ifu_broadaddr);
+#endif
 				break;
 			case AF_INET6:
+#ifdef __APPLE__
+				*(sockaddr_in6 *)&sa = *((sockaddr_in6 *)ifa->ifa_dstaddr);
+#else
 				*(sockaddr_in6 *)&sa = *((sockaddr_in6 *)ifa->ifa_ifu.ifu_broadaddr);
+#endif
 				break;
 			default:
 				;
