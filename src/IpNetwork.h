@@ -449,7 +449,7 @@ static std::list<sockaddr_storage> get_broadcast_address_list(sa_family_t net_fa
 		auto flags = ifa->ifa_flags;
 		constexpr auto flags_mask = IFF_BROADCAST | IFF_UP | IFF_RUNNING;
 
-		if ((family == net_family) && (flags & flags_mask)) {
+		if ((family == net_family) && ((flags & flags_mask) == flags_mask)) {
 			sockaddr_storage sa = {};
 			switch (family) {
 			case AF_INET:
