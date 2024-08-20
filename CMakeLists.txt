@@ -97,13 +97,24 @@ target_include_directories(${target} PUBLIC ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(${target} ${OpenCV_LIBRARIES})
 target_compile_definitions(${target} PUBLIC GAPI_ENABLE)
 
+if(APPLE)
+    target_include_directories(${target} PUBLIC /usr/local/include)
+    target_link_directories(${target} PUBLIC /usr/local/lib)
+    target_link_libraries(${target} libGLEW.a)
+    target_link_libraries(${target} "-framework OpenGL")
+    target_link_libraries(${target} "-framework Cocoa")
+    target_link_libraries(${target} "-framework IOKit")
+endif(APPLE)
+
 # ImGui.
 set(IMGUI_INCLUDE_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/${IMGUI_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/${IMGUI_DIR}/backends"
 )
 target_include_directories(${target} PUBLIC ${IMGUI_INCLUDE_DIRS})
-target_link_libraries(${target} GL dl)
+if(NOT APPLE)
+    target_link_libraries(${target} GL dl)
+endif(APPLE)
 
 # JSON.
 set(JSON_INCLUDE_DIR "${EXTERNAL_DIR}/json/single_include/nlohmann")
@@ -144,6 +155,9 @@ target_link_libraries(${target} cpr::cpr)
 
 # using NVIDIA Jetson.
 # target_compile_definitions(${target} PUBLIC JETSON)
+
+# using Apple VideoToolbox plugins of GStreamer.
+# target_compile_definitions(${target} PUBLIC GST_APPLE)
 
 ## Install path defined in parent CMakeLists
 install(TARGETS ${target} DESTINATION ${exe_install_path})

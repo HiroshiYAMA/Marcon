@@ -82,6 +82,9 @@ std::string make_gst_pipeline(const st_RemoteServer &remote_server)
 #else
     ss << "nvvideoconvert ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";
 #endif
+#elif GST_APPLE
+    ss << "vtdec_hw ! ";
+    ss << "videoscale n-threads=" << thread_count << " ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";
 #else
     ss << "avdec_h264 ! ";
     ss << "videoscale n-threads=" << thread_count << " ! video/x-raw,width=" << image_width << ",height=" << image_height << " ! ";
