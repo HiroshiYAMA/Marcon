@@ -31,6 +31,8 @@
 #include "ProcLiveView.h"
 #include "CGI.h"
 
+#include "Gui_Window_Keyboard.h"
+
 #if __has_include(<charconv>)
 #include <charconv>
 #endif
@@ -187,6 +189,9 @@ private:
     };
 
     st_RemoteServer remote_server = {};
+    Gui_Window_Keyboard kb = {};
+    bool display_input_username = false;
+    bool display_input_password = false;
 
     CGICmd::em_StreamMode stream_mode_bkup;
 
@@ -2849,11 +2854,26 @@ public:
         ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f), ImGuiCond_Appearing);
 #endif
 
+        bool is_window_opened = true;
+
+        bool display_keyboard = display_input_username || display_input_password;
+        if (!display_keyboard) {
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+                camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
+                is_window_opened = false;
+            }
+
+            auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+            if (is_drag_left) {
+                camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
+                is_window_opened = false;
+            }
+        }
+
         // char str[128];
         // sprintf(str, "Login -->##%s", win_id.c_str());
         auto &rs = remote_server;
         std::string str = rs.ip_address + ":" + rs.port + " / " + "[SRT]" + (rs.is_srt_listener ? "Listener" : "Caller") + ":" + rs.srt_port;
-        bool is_window_opened = true;
         ImGui::Begin(str.c_str(), &is_window_opened, window_flags);
         {
             // // print selected camera info.
@@ -2864,14 +2884,22 @@ public:
             {
                 auto str = "user name: ";
                 ImGui::Text("%s", str); ImGui::SameLine();
-                show_panel_inputtext(str, rs.username, 200);
+                auto req = show_panel_inputtext(str, rs.username, 200);
+                if (req) display_input_username = true;
+                if (display_input_username) {
+                    display_input_username = kb.display_keyboard_window(req, str, rs.username);
+                }
             }
 
             // password.
             {
                 auto str = "password:  ";
                 ImGui::Text("%s", str); ImGui::SameLine();
-                show_panel_inputtext(str, rs.password, 200, true);
+                auto req = show_panel_inputtext(str, rs.password, 200, true);
+                if (req) display_input_password = true;
+                if (display_input_password) {
+                    display_input_password = kb.display_keyboard_window(req, str, rs.password, Gui_Window_Keyboard::em_KeyboardPattern::LOWER, true);
+                }
             }
 
             if (ImGui::Button("Login")) {
@@ -2882,17 +2910,6 @@ public:
             }
         }
         ImGui::End();
-
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
-            camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
-            is_window_opened = false;
-        }
-
-        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
-        if (is_drag_left) {
-            camera_connection_stat.store(em_Camera_Connection_State::NO_AUTH);
-            is_window_opened = false;
-        }
 
         return is_window_opened;
     }

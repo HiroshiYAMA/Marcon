@@ -26,6 +26,7 @@
 #include <fstream>
 
 #include "Gui_Window_Camera.h"
+#include "Gui_Window_Keyboard.h"
 #include "common_utils.h"
 #include "gui_utils.h"
 #include "RemoteServer.h"
@@ -91,6 +92,10 @@ private:
     em_State state;
 
     bool show_demo_window;
+
+    Gui_Window_Keyboard kb;
+    bool display_input_ip_address;
+    bool display_input_port_number;
 
     // Menu.
     void show_menu_control()
@@ -163,8 +168,22 @@ private:
         ImGui::SameLine();
         ImGui::SetWindowFontScale(1.0f);
 
-        show_panel_input_ip_address("IP address", rs.ip_address, 10 * 13.0f, "IPv4 adress"); ImGui::SameLine();
-        show_panel_input_port_number("Port number", rs.port, 4 * 13.0f); ImGui::SameLine();
+        auto req_input_ip_address = show_panel_input_ip_address("IP address", rs.ip_address, 10 * 13.0f, "IPv4 adress"); ImGui::SameLine();
+        if (req_input_ip_address) {
+            display_input_ip_address = true;
+        }
+        auto req_input_port_number = show_panel_input_port_number("Port number", rs.port, 4 * 13.0f); ImGui::SameLine();
+        if (req_input_port_number) {
+            display_input_port_number = true;
+        }
+
+        // popup keyboard window.
+        if (display_input_ip_address) {
+            display_input_ip_address = kb.display_keyboard_window(req_input_ip_address, "IP address", rs.ip_address, Gui_Window_Keyboard::em_KeyboardPattern::NUMBER);
+        } else if (display_input_port_number) {
+            display_input_port_number = kb.display_keyboard_window(req_input_port_number, "Port number", rs.port, Gui_Window_Keyboard::em_KeyboardPattern::NUMBER);
+        }
+
         if (ImGui::Button("Add")) {
             if (rs.ip_address != "" && rs.port != "") {
                 auto &key = rs.ip_address;
@@ -410,6 +429,10 @@ public:
         state = em_State::LANCHER;
 
         show_demo_window = false;
+
+        kb = {};
+        display_input_ip_address = false;
+        display_input_port_number = false;
 
         // このインスタンスの this ポインタを記録しておく
         glfwSetWindowUserPointer(window, this);
