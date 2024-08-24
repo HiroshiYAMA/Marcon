@@ -43,6 +43,7 @@ namespace fs = std::filesystem;
 #endif
 
 #include "IpNetwork.h"
+uint32_t IpNetwork::VISCA_IP::sequence_number = 0;
 
 void init_search_ipadr()
 {

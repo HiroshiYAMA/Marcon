@@ -97,6 +97,25 @@ private:
     bool display_input_ip_address;
     bool display_input_port_number;
 
+    // blinking tally.
+    using tally_color_t = IpNetwork::VISCA_Tally_Command::em_COLOR;
+    void blink_tally(const std::string &name, tally_color_t color = tally_color_t::RED)
+    {
+        std::unique_ptr<IpNetwork::VISCA_Com> visca_com;
+        visca_com = IpNetwork::VISCA_Com::Create(name);
+
+        bool is_on = true;
+        for (auto i = 0; i < 20; i++) {
+            // Send Tally command.
+            auto color = IpNetwork::VISCA_Tally_Command::em_COLOR::RED;
+            visca_com->send_cmd_tally(color, is_on);
+
+            is_on = !is_on;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        }
+    }
+
     // Menu.
     void show_menu_control()
     {
@@ -237,7 +256,7 @@ private:
             ImGui::SameLine();
 
             set_style_color(6.0f / 7.0f);
-            if (ImGui::Button("Delete")) {
+            if (ImGui::Button("Del")) {
                 remote_server_info_DB.erase(k);
 
                 reset_style_color();
@@ -245,6 +264,12 @@ private:
                 break;
             }
             reset_style_color();
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("@T@##Tally", ImVec2(0, btn_size.y))) {
+                blink_tally(rs.ip_address);
+            }
 
             ImGui::PopID();
         }

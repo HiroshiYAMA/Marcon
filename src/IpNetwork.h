@@ -43,6 +43,7 @@ using sa_family_t = ADDRESS_FAMILY;
 
 
 namespace IpNetwork {
+using packet_type = std::vector<uint8_t>;
 
 enum class em_DataType : int {
 	NETWORK_INFO,
@@ -579,8 +580,8 @@ static bool set_multicast_group(int sock, const std::string &mc_if, const addrin
 class IData
 {
 public:
-	virtual std::vector<uint8_t> pack() = 0;
-	virtual void unpack(const std::vector<uint8_t> &pkt) = 0;
+	virtual packet_type pack() = 0;
+	virtual void unpack(const packet_type &pkt) = 0;
 };
 
 
@@ -593,7 +594,7 @@ protected:
 	static constexpr uint8_t DELIMITER_MARK = 0xFF;
 	static constexpr uint8_t PARAMETER_MARK = ':';
 
-	static bool check_data(const std::vector<uint8_t> &data)
+	static bool check_data(const packet_type &data)
 	{
 		if (data.size() < 3) return false;
 
@@ -638,16 +639,14 @@ private:
 protected:
 
 public:
-	std::vector<uint8_t> pack() override
+	packet_type pack() override
 	{
-		std::vector<uint8_t> pkt;
+		packet_type pkt;
 
 		pkt.push_back(START_MARK);
 
 		const std::string str = std::string{PARAM} + (char)PARAMETER_MARK + VALUE;
-		for (auto &e : str) {
-			pkt.push_back(e);
-		}
+		pkt.insert(pkt.end(), str.cbegin(), str.cend());
 		pkt.push_back(DELIMITER_MARK);
 
 		pkt.push_back(END_MARK);
@@ -655,14 +654,14 @@ public:
 		return pkt;
 	}
 
-	void unpack(const std::vector<uint8_t> &pkt) override
+	void unpack(const packet_type &pkt) override
 	{
 		if (!check_data(pkt)) return;
 
 		std::string str(pkt.begin() + 1, pkt.end() - 2);
 		std::stringstream ss(str);
 		std::vector<std::string> param_list;
-		while (std::getline(ss, str, (char)0xFF)) {
+		while (std::getline(ss, str, (char)DELIMITER_MARK)) {
 			if (!str.empty()) param_list.push_back(str);
 		}
 
@@ -718,9 +717,9 @@ private:
 protected:
 
 public:
-	std::vector<uint8_t> pack() override
+	packet_type pack() override
 	{
-		std::vector<uint8_t> pkt;
+		packet_type pkt;
 
 		pkt.push_back(START_MARK);
 
@@ -738,9 +737,7 @@ public:
 		for (const auto &param : param_list) {
 			const auto &val = netinfo_list[param];
 			const std::string str = param + (char)PARAMETER_MARK + val;
-			for (auto &e : str) {
-				pkt.push_back(e);
-			}
+			pkt.insert(pkt.end(), str.cbegin(), str.cend());
 			pkt.push_back(DELIMITER_MARK);
 		}
 
@@ -749,14 +746,14 @@ public:
 		return pkt;
 	}
 
-	void unpack(const std::vector<uint8_t> &pkt) override
+	void unpack(const packet_type &pkt) override
 	{
 		if (!check_data(pkt)) return;
 
 		std::string str(pkt.begin() + 1, pkt.end() - 2);
 		std::stringstream ss(str);
 		std::vector<std::string> param_list;
-		while (std::getline(ss, str, (char)0xFF)) {
+		while (std::getline(ss, str, (char)DELIMITER_MARK)) {
 			if (!str.empty()) param_list.push_back(str);
 		}
 
@@ -826,14 +823,14 @@ private:
 protected:
 
 public:
-	std::vector<uint8_t> pack() override
+	packet_type pack() override
 	{
 		auto pkt = request->pack();
 
 		return pkt;
 	}
 
-	void unpack(const std::vector<uint8_t> &pkt) override
+	void unpack(const packet_type &pkt) override
 	{
 		response->unpack(pkt);
 	}
@@ -887,9 +884,411 @@ template<typename T> std::unique_ptr<Data> create_vgmpad_data()
 
 
 
+inline auto set_pkt = [](auto &pkt, auto val) -> void {
+	auto sz = sizeof(val);
+	for (auto i = 0; i < sz; i++) {
+		auto e = (val >> (8 * (sz - i - 1))) & 0xFF;
+		pkt.push_back(e);
+	}
+};
+
+inline auto get_pkt = [](auto &itr, auto &val, auto &itr_end) -> void {
+	auto sz = sizeof(val);
+	val = 0;
+	for (auto i = 0; (i < sz) && (itr < itr_end); i++) {
+		val <<= 8;
+		val |= *itr;
+		itr++;
+	}
+};
+
+class VISCA : public IData
+{
+protected:
+	static constexpr uint8_t END_MARK = 0xFF;
+	static constexpr uint8_t On = 0x02;
+	static constexpr uint8_t Off = 0x03;
+
+public:
+	VISCA() {}
+	virtual ~VISCA() {}
+};
+
+
+
+class VISCA_Command : public VISCA
+{
+protected:
+	const packet_type head = { 0x81, 0x01 };
+
+public:
+	VISCA_Command() {}
+	virtual ~VISCA_Command() {}
+};
+
+
+
+class VISCA_Response : public VISCA
+{
+public:
+	enum class em_Type
+	{
+		ACK,
+		Completion,
+		Error,
+
+		Invalid,
+	};
+
+	enum class em_ErrorCode
+	{
+		Message_length_eror = 0x01,
+		Syntax_Error = 0x02,
+		Command_buffer_full = 0x03,
+		Command_canceled = 0x04,
+		No_socket = 0x05,
+		Command_not_executable = 0x41,
+	};
+
+private:
+	em_Type type = em_Type::Invalid;
+	int sock_num = -1;
+	packet_type data;
+
+protected:
+	static constexpr uint8_t START_MARK = 0x90;
+	static constexpr uint8_t ACK = 0x40;
+	static constexpr uint8_t Completion = 0x50;
+	static constexpr uint8_t Error = 0x60;
+
+	static constexpr uint8_t MASK_TYPE = 0xF0;
+	static constexpr uint8_t MASK_SOCKET = 0x0F;
+
+public:
+	packet_type pack()
+	{
+		return {};	// TODO: implenent.
+	}
+
+	void unpack(const packet_type &pkt) override
+	{
+		type = em_Type::Invalid;
+		sock_num = -1;
+		data.clear();
+
+		if (pkt.size() < 3 || pkt.back() != VISCA::END_MARK) return;
+
+		auto st_mark = pkt[0];
+		if (st_mark != START_MARK) return;
+
+		auto t = pkt[1] & MASK_TYPE;
+		switch(t) {
+		case ACK:
+			type = em_Type::ACK;
+			break;
+
+		case Completion:
+			type = em_Type::Completion;
+			break;
+
+		case Error:
+			type = em_Type::Error;
+			break;
+
+		default:
+			;
+		}
+
+		sock_num = pkt[1] & MASK_SOCKET;
+
+		data.assign(pkt.begin() + 2, pkt.end() - 1);
+	}
+
+	em_Type get_type() const { return type; }
+	int get_socket_number() const { return sock_num; }
+	const packet_type &get_data() const { return data; }
+	bool is_ack() const { return (type == em_Type::ACK) && (sock_num >= 0) && data.empty(); }
+	bool is_comp_command() const { return (type == em_Type::Completion) && (sock_num >= 0) && data.empty(); }
+	bool is_comp_inquiry() const { return (type == em_Type::Completion) && (sock_num >= 0) && (data.size() > 0); }
+
+	VISCA_Response() {}
+	virtual ~VISCA_Response() {}
+};
+
+
+
+class VISCA_Tally_Command : public VISCA_Command
+{
+public:
+	enum class em_COLOR
+	{
+		RED,
+		GREEN,
+	};
+
+private:
+	static constexpr uint8_t Category_Code = 0x7E;
+	const packet_type RED = { 0x01, 0x0A };
+	const packet_type GREEN = { 0x04, 0x1A };
+
+	em_COLOR color = em_COLOR::GREEN;
+	bool is_on = false;
+
+public:
+	packet_type pack() override
+	{
+		packet_type pkt;
+
+		pkt = head;
+		pkt.push_back(Category_Code);
+		if (color == em_COLOR::RED) {
+			pkt.insert(pkt.end(), RED.cbegin(), RED.cend());
+		} else if (color == em_COLOR::GREEN) {
+			pkt.insert(pkt.end(), GREEN.cbegin(), GREEN.cend());
+		} else {
+			return {};
+		}
+		pkt.push_back(0);
+		pkt.push_back(is_on ? VISCA::On : VISCA::Off);
+		pkt.push_back(VISCA::END_MARK);
+
+		return pkt;
+	}
+
+	void unpack(const packet_type &pkt) override
+	{
+		;	// TODO: implement.
+	}
+
+	void set_tally_color(em_COLOR val) { color = val; }
+	void set_tally_on(bool val) { is_on = val; }
+
+	VISCA_Tally_Command() {}
+
+	virtual ~VISCA_Tally_Command() {}
+};
+
+
+
+class VISCA_IP : public IData
+{
+public:
+	static constexpr uint16_t ID_COMMAND          = 0x01'00;
+	static constexpr uint16_t ID_INQUIRY          = 0x01'10;
+	static constexpr uint16_t ID_RESPONSE         = 0x01'11;
+	static constexpr uint16_t ID_SETTING_COMMAND  = 0x01'20;
+	static constexpr uint16_t ID_CONTROL          = 0x02'00;
+	static constexpr uint16_t ID_CONTROL_RESPONSE = 0x02'01;
+
+private:
+	static uint32_t sequence_number;
+
+	struct st_Header
+	{
+		uint16_t id = static_cast<uint16_t>(-1);
+		uint16_t len = static_cast<uint16_t>(-1);
+		uint32_t seq = static_cast<uint16_t>(-1);
+	};
+
+	st_Header header = {};
+	packet_type payload = {};
+
+protected:
+
+public:
+	static void reset_sequence_number() { sequence_number = 0; }
+	static void count_up_sequence_number() { sequence_number++; }
+
+	static bool is_error_invalid_sequence_number(const packet_type &pkt)
+	{
+		VISCA_IP visca_ip(pkt);
+		bool is_error = (visca_ip.get_id() == ID_CONTROL)
+			&& (visca_ip.get_payload() == packet_type{ 0x0F, 0x01 });
+
+		return is_error;
+	}
+	bool is_error_invalid_sequence_number() const
+	{
+		bool is_error = (header.id == ID_CONTROL)
+			&& (payload == packet_type{ 0x0F, 0x01 });
+
+		return is_error;
+	}
+
+	static std::optional<VISCA_Response> get_msg_response(const packet_type &pkt)
+	{
+		VISCA_IP visca_ip(pkt);
+
+		bool is_response = (visca_ip.get_id() == ID_RESPONSE);
+		if (!is_response) return std::nullopt;
+
+		auto payload = visca_ip.get_payload();
+		VISCA_Response visca_res;
+		visca_res.unpack(payload);
+
+		return visca_res;
+	}
+
+	static bool is_ack(const packet_type &pkt)
+	{
+		auto visca_res = get_msg_response(pkt);
+		if (!visca_res) return false;
+
+		auto ret = visca_res->is_ack();
+
+		return ret;
+	}
+	bool is_ack() const
+	{
+		if (header.id != ID_RESPONSE) return false;
+
+		VISCA_Response visca_res;
+		visca_res.unpack(payload);
+
+		return visca_res.is_ack();
+	}
+
+	static bool is_comp_command(const packet_type &pkt)
+	{
+		auto visca_res = get_msg_response(pkt);
+		if (!visca_res) return false;
+
+		auto ret = visca_res->is_comp_command();
+
+		return ret;
+	}
+	bool is_comp_command() const
+	{
+		if (header.id != ID_RESPONSE) return false;
+
+		VISCA_Response visca_res;
+		visca_res.unpack(payload);
+
+		return visca_res.is_comp_command();
+	}
+
+	static bool is_comp_inquiry(const packet_type &pkt)
+	{
+		auto visca_res = get_msg_response(pkt);
+		if (!visca_res) return false;
+
+		auto ret = visca_res->is_comp_inquiry();
+
+		return ret;
+	}
+	bool is_comp_inquiry() const
+	{
+		if (header.id != ID_RESPONSE) return false;
+
+		VISCA_Response visca_res;
+		visca_res.unpack(payload);
+
+		return visca_res.is_comp_inquiry();
+	}
+
+	static int get_msg_socket_number(const packet_type &pkt)
+	{
+		auto visca_res = get_msg_response(pkt);
+		if (!visca_res) return -1;
+
+		auto ret = visca_res->get_socket_number();
+
+		return ret;
+	}
+
+	static packet_type get_msg_data(const packet_type &pkt)
+	{
+		auto visca_res = get_msg_response(pkt);
+		if (!visca_res) return {};
+
+		auto ret = visca_res->get_data();
+
+		return ret;
+	}
+
+	static packet_type make_packet_reset_sequence_number()
+	{
+		packet_type pkt{ 0x01 };
+
+		VISCA_IP v_ip;
+		v_ip.set_id(VISCA_IP::ID_CONTROL);
+		v_ip.set_length(pkt.size());
+		v_ip.set_payload(pkt);
+		pkt = v_ip.pack();
+
+		return pkt;
+	}
+
+	static bool is_ack_control_cmd(const packet_type &pkt)
+	{
+		VISCA_IP v_ip(pkt);
+
+		bool is_ack_cc = (v_ip.get_id() == ID_CONTROL_RESPONSE)
+			&& (v_ip.get_payload() == packet_type{ 0x01 });
+
+		return is_ack_cc;
+	}
+
+	packet_type pack() override
+	{
+		packet_type pkt;
+
+		set_pkt(pkt, header.id);
+		set_pkt(pkt, header.len);
+		header.seq = sequence_number;
+		set_pkt(pkt, header.seq);
+
+		pkt.insert(pkt.end(), payload.cbegin(), payload.cend());
+
+		return pkt;
+	}
+
+	void unpack(const packet_type &pkt) override
+	{
+		auto itr = pkt.cbegin();
+		auto itr_end = pkt.cend();
+
+		get_pkt(itr, header.id, itr_end);
+		get_pkt(itr, header.len, itr_end);
+		get_pkt(itr, header.seq, itr_end);
+
+		payload.assign(itr, pkt.cend());
+	}
+
+	void set_id(uint16_t val) { header.id = val; }
+	void set_length(uint16_t val) { header.len = val; }
+	void set_sequence_number(uint32_t val) { header.seq = val; }
+	void set_payload(const packet_type &val) { payload = val; }
+
+	void set_command(const packet_type &payload)
+	{
+		set_id(IpNetwork::VISCA_IP::ID_COMMAND);
+		set_length(payload.size());
+		set_payload(payload);
+	}
+
+	uint16_t get_id() const { return header.id; }
+	uint16_t get_length() const { return header.len; }
+	uint32_t get_sequence_number() const { return header.seq; }
+	const packet_type &get_payload() const { return payload; }
+
+	VISCA_IP() {}
+	explicit VISCA_IP(const packet_type &pkt)
+	{
+		unpack(pkt);
+	}
+
+	virtual ~VISCA_IP() {}
+};
+
+
+
 class Connection
 {
 public:
+	using queue_type = std::queue<packet_type>;
+	static constexpr size_t QUEUE_SIZE_MAX = 1024;
+
 	enum class em_Mode : int {
 		SEND,	// target.
 		RECEIVE,	// source.
@@ -897,10 +1296,6 @@ public:
 	};
 
 private:
-	using packet_type = std::vector<uint8_t>;
-	using queue_type = std::queue<packet_type>;
-	static constexpr size_t QUEUE_SIZE_MAX = 1024;
-
 	queue_type send_queue;
 	queue_type receive_queue;
 	std::mutex mtx_send_queue;
@@ -1042,12 +1437,12 @@ public:
 	virtual bool close() = 0;
 	virtual bool poll(int64_t time_out = 33) = 0;
 
-	virtual bool send(const packet_type &pkt, int64_t time_out = 33)
+	virtual bool send(const packet_type &pkt)
 	{
 		return set_send_packet(pkt);
 	}
 
-	virtual std::optional<packet_type> receive(int64_t time_out = 33)
+	virtual std::optional<packet_type> receive()
 	{
 		return get_receive_packet();
 	}
@@ -1369,7 +1764,7 @@ public:
 		const auto str_direction = get_direction_str(m_mode);
 
 #ifdef USE_EPOLL
-		int num = epoll_wait(m_pollid, m_sys_event, m_sys_event_len, EPORLL_WAIT_TIMEOUT);
+		int num = epoll_wait(m_pollid, m_sys_event, m_sys_event_len, time_out);
 		if (num < 0) {
 			LogError("ERROR!! epoll_wait\n");
 			return false;
@@ -1430,7 +1825,7 @@ public:
 					auto retry_count = 0;
 					while (retry_count++ < RECV_RETRY_MAX)
 					{
-						std::vector<uint8_t> pkt(RECV_PACKET_SIZE_MAX);
+						packet_type pkt(RECV_PACKET_SIZE_MAX);
 						sockaddr_storage from_addr;
 						socklen_t sin_size = sizeof(from_addr);
 						const int stat = recvfrom(m_sock, (char *)pkt.data(), pkt.size(), 0, (sockaddr *)&from_addr, &sin_size);
@@ -1479,6 +1874,148 @@ public:
 	UDP() {}
 
 	virtual ~UDP() {}
+};
+
+
+
+class VISCA_Com
+{
+private:
+	static constexpr auto PORT_NUMBER = "52381";
+
+	std::unique_ptr<Connection> sender;
+	std::unique_ptr<Connection> receiver;
+
+public:
+	static std::unique_ptr<VISCA_Com> Create(const std::string &name)
+	{
+		auto v_com = std::make_unique<VISCA_Com>();
+		if (!v_com) return nullptr;
+
+		v_com->sender = UDP::Create(name, PORT_NUMBER, Connection::em_Mode::SEND, true, "", 0, false);
+		v_com->receiver = UDP::Create("0.0.0.0", PORT_NUMBER, Connection::em_Mode::RECEIVE, false, "", 0, false);
+		if (!v_com->sender || !v_com->receiver) return nullptr;
+
+		return std::move(v_com);
+	}
+
+	bool open(const std::string &name)
+	{
+		auto flg_s = sender->open(name, PORT_NUMBER, Connection::em_Mode::SEND, true, "", 0, false);
+		auto flg_r = receiver->open("0.0.0.0", PORT_NUMBER, Connection::em_Mode::RECEIVE, false, "", 0, false);
+
+		return flg_s & flg_r;
+	}
+
+	bool close()
+	{
+		auto flg_s = sender->close();
+		auto flg_r = receiver->close();
+
+		return flg_s & flg_r;
+	}
+
+	// Reset for invalid sequence number.
+	bool send_reset_sequence_number(int timeout_msec = 1000, int retry_count = 10)
+	{
+		auto reset_pkt = VISCA_IP::make_packet_reset_sequence_number();
+		sender->send(reset_pkt);
+		sender->poll();
+
+		// wait ACK(Control Command).
+		{
+			bool is_recv_loop = true;
+			for (auto i = 0; i < retry_count && is_recv_loop; i++) {
+				while (receiver->poll(timeout_msec)) {
+					if (receiver->is_empty_receive_queue()) break;
+
+					while (auto pkt = receiver->receive()) {
+						if (VISCA_IP::is_ack_control_cmd(*pkt)) {
+							while (receiver->receive()) {}	// clear receive buffer.
+							is_recv_loop = false;
+							break;
+						}
+					}
+
+					if (!is_recv_loop) break;
+				}
+
+				if (is_recv_loop) std::this_thread::sleep_for(std::chrono::milliseconds(33));
+			}
+		}
+
+		return true;
+	}
+
+	bool send(VISCA_IP &visca_ip, int timeout_msec = 1000, int retry_count = 10)
+	{
+		// Send packet.
+		auto pkt = visca_ip.pack();
+		sender->send(pkt);
+		sender->poll();
+
+		// Receive Response.
+		bool is_recv_loop = true;
+		for (auto i = 0; i < retry_count && is_recv_loop; i++) {
+			while (receiver->poll(timeout_msec)) {
+				if (receiver->is_empty_receive_queue()) break;
+
+				while (auto pkt = receiver->receive()) {
+					VISCA_IP visca_ip(*pkt);
+
+					// Reset for invalid sequence number.
+					if (visca_ip.is_error_invalid_sequence_number()) {
+						send_reset_sequence_number();
+					}
+
+					if (visca_ip.is_ack()) {
+						std::cout << "Receive ACK." << std::endl;
+					}
+
+					if (visca_ip.is_comp_command()) {
+						std::cout << "Receive Completion(command)." << std::endl;
+						while (receiver->receive()) {}	// clear receive buffer.
+						is_recv_loop = false;
+						break;
+					}
+				}
+
+				if (!is_recv_loop) break;
+			}
+
+			if (is_recv_loop) std::this_thread::sleep_for(std::chrono::milliseconds(33));
+		}
+
+		visca_ip.count_up_sequence_number();
+
+		return true;
+	}
+
+	std::optional<packet_type> receive()
+	{
+		return {};
+	}
+
+	// Send Tally command.
+	bool send_cmd_tally(VISCA_Tally_Command::em_COLOR color, bool is_on)
+	{
+		VISCA_Tally_Command cmd;
+		cmd.set_tally_color(color);
+		cmd.set_tally_on(is_on);
+		auto payload = cmd.pack();
+
+		VISCA_IP visca_ip;
+		visca_ip.set_command(payload);
+
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+
+	VISCA_Com() {}
+
+	virtual ~VISCA_Com() {}
+
 };
 
 }	// namespace IpNetwork.
