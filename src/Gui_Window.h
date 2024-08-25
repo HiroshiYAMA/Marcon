@@ -98,6 +98,9 @@ private:
     bool display_input_port_number;
 
     // blinking tally.
+    std::thread thd_blink_tally;
+    std::atomic_bool fin_thd_blink_tally;
+    float hue_blink_tally_button = 0.0f;
     using tally_color_t = IpNetwork::VISCA_Tally_Command::em_COLOR;
     void blink_tally(const std::string &name, tally_color_t color = tally_color_t::RED)
     {
@@ -114,6 +117,8 @@ private:
 
             std::this_thread::sleep_for(std::chrono::milliseconds(150));
         }
+
+        fin_thd_blink_tally.store(true);
     }
 
     // Menu.
@@ -137,14 +142,9 @@ private:
         }
     }
 
-    // manage remote server DB.
-    void show_panel_manage_remote_server_DB()
+    // search & list IP address.
+    void show_panel_search_ip(st_RemoteServer &rs)
     {
-        ImGui::PushID("Manage_Remote_Server_DB");
-
-        auto &rs_info = remote_server_info;
-        auto &rs = rs_info.remote_server;
-
         ImGui::SetWindowFontScale(1.5f);
         if (ImGui::Button("Search")) {
             net_info_list = search_ipadr();
@@ -184,8 +184,83 @@ private:
                 ImGui::EndCombo();
             }
         }
-        ImGui::SameLine();
         ImGui::SetWindowFontScale(1.0f);
+    }
+
+    void show_panel_connect_camera(st_RemoteServerInfo &rs_info)
+    {
+        ImGuiStyle& style = ImGui::GetStyle();
+        const auto text_size = ImGui::CalcTextSize("(********) 255.255.255.255:65535/[SRT]Listener");
+        const auto pad_frame = style.FramePadding;
+        const ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+
+        auto &rs = rs_info.remote_server;
+        std::string str = "(" + rs.nickname + ") " + rs.ip_address + ":" + rs.port + " / [SRT]" + (rs.is_srt_listener ? "Listener" : "Caller");
+
+        set_style_color(2.0f / 7.0f);
+        if (ImGui::Button(str.c_str(), btn_size)) {
+            auto &gui_win_camera = rs_info.handle;
+            if (!gui_win_camera) {
+                gui_win_camera = std::make_unique<Gui_Window_Camera>(win_w, win_h, rs_info.remote_server);
+                if (gui_win_camera) {
+                    if (gui_win_camera->is_CONNECTED()) {
+                        state = em_State::CAMERA_CONTROL;
+                    } else {
+                        gui_win_camera->DISCONNECT();
+                        gui_win_camera.reset();
+                        state = em_State::LANCHER;
+                    }
+                }
+            }
+        }
+        reset_style_color();
+    }
+
+    // blink tally.
+    void show_panel_blink_tally(const std::string &ip_address)
+    {
+        ImGuiStyle& style = ImGui::GetStyle();
+        const auto text_size = ImGui::CalcTextSize("A");
+        const auto pad_frame = style.FramePadding;
+        const ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+
+        auto is_set_color = false;
+        constexpr auto hue_max = 8.0f;
+        auto idx_btn_text = static_cast<int>(hue_blink_tally_button * 4) % 4;
+        auto btn_text = fin_thd_blink_tally.load() ? "@T@##Tally"
+            : idx_btn_text == 0 ? " | ##Tally"
+            : idx_btn_text == 1 ? " / ##Tally"
+            : idx_btn_text == 2 ? " - ##Tally"
+            : " \\ ##tally"
+            ;
+        if (!fin_thd_blink_tally.load()) {
+            set_style_color(hue_blink_tally_button / hue_max, 0.7f, 0.7f);
+            hue_blink_tally_button += 0.1f;
+            if (hue_blink_tally_button > hue_max) hue_blink_tally_button = 0.0f;
+            is_set_color = true;
+        }
+        if (ImGui::Button(btn_text, ImVec2(0, btn_size.y))) {
+            if (!thd_blink_tally.joinable()) {
+                fin_thd_blink_tally.store(false);
+                std::thread thd_tmp{ [&]{ blink_tally(ip_address); }};
+                thd_blink_tally = std::move(thd_tmp);
+            }
+        }
+        if (thd_blink_tally.joinable() && fin_thd_blink_tally.load()) thd_blink_tally.join();
+        if (is_set_color) reset_style_color();
+    }
+
+    // manage remote server DB.
+    void show_panel_manage_remote_server_DB()
+    {
+        ImGui::PushID("Manage_Remote_Server_DB");
+
+        auto &rs_info = remote_server_info;
+        auto &rs = rs_info.remote_server;
+
+        show_panel_search_ip(rs);
+
+        ImGui::SameLine();
 
         auto req_input_ip_address = show_panel_input_ip_address("IP address", rs.ip_address, 10 * 13.0f, "IPv4 adress"); ImGui::SameLine();
         if (req_input_ip_address) {
@@ -227,31 +302,7 @@ private:
         for (auto &[k, v] : remote_server_info_DB) {
             ImGui::PushID(k.c_str());
 
-            ImGuiStyle& style = ImGui::GetStyle();
-            const auto text_size = ImGui::CalcTextSize("(********) 255.255.255.255:65535/[SRT]Listener");
-            const auto pad_frame = style.FramePadding;
-            const ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
-
-            auto &rs = v.remote_server;
-            std::string str = "(" + rs.nickname + ") " + rs.ip_address + ":" + rs.port + " / [SRT]" + (rs.is_srt_listener ? "Listener" : "Caller");
-    
-            set_style_color(2.0f / 7.0f);
-            if (ImGui::Button(str.c_str(), btn_size)) {
-                auto &gui_win_camera = v.handle;
-                if (!gui_win_camera) {
-                    gui_win_camera = std::make_unique<Gui_Window_Camera>(win_w, win_h, v.remote_server);
-                    if (gui_win_camera) {
-                        if (gui_win_camera->is_CONNECTED()) {
-                            state = em_State::CAMERA_CONTROL;
-                        } else {
-                            gui_win_camera->DISCONNECT();
-                            gui_win_camera.reset();
-                            state = em_State::LANCHER;
-                        }
-                    }
-                }
-            }
-            reset_style_color();
+            show_panel_connect_camera(v);
 
             ImGui::SameLine();
 
@@ -267,9 +318,8 @@ private:
 
             ImGui::SameLine();
 
-            if (ImGui::Button("@T@##Tally", ImVec2(0, btn_size.y))) {
-                blink_tally(rs.ip_address);
-            }
+            // blink tally.
+            show_panel_blink_tally(v.remote_server.ip_address);
 
             ImGui::PopID();
         }
@@ -459,6 +509,8 @@ public:
         display_input_ip_address = false;
         display_input_port_number = false;
 
+        fin_thd_blink_tally.store(true);
+
         // このインスタンスの this ポインタを記録しておく
         glfwSetWindowUserPointer(window, this);
 
@@ -480,6 +532,10 @@ public:
 
     virtual ~Gui_Window()
     {
+        if (thd_blink_tally.joinable()) {
+            thd_blink_tally.join();
+        }
+
         DISCONNECT();
     }
 
