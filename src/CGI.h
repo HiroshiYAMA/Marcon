@@ -384,6 +384,66 @@ public:
 
 
 /////////////////////////////////////////////////////////////////////
+// tally.
+enum em_TurnOnOff
+{
+    TURN_OFF,
+    TURN_ON,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_TurnOnOff, {
+    {TURN_OFF, "turn_off"},
+    {TURN_ON, "turn_on"},
+})
+
+enum em_InternalExternal
+{
+    INTERNAL,
+    EXTERNAL,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_InternalExternal, {
+    {INTERNAL, "internal"},
+    {EXTERNAL, "external"},
+})
+
+enum em_OffLowHigh
+{
+    OFF,
+    LOW,
+    HIGH,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_OffLowHigh, {
+    {OFF, "off"},
+    {LOW, "low"},
+    {HIGH, "high"},
+})
+
+struct st_Tally
+{
+    static constexpr auto cmd = "tally";
+
+    COMMON::em_OnOff GTallyLampEnable;
+    em_TurnOnOff GTallyControl;
+    em_InternalExternal TallyControlMode;
+    em_TurnOnOff RTallyControl;
+    em_OffLowHigh TallyLampBrightness;
+    COMMON::em_OnOff TallyLampBrightnessExtra;
+
+public:
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(
+        st_Tally,
+
+        GTallyLampEnable,
+        GTallyControl,
+        TallyControlMode,
+        RTallyControl,
+        TallyLampBrightness,
+        TallyLampBrightnessExtra
+    )
+};
+
+
+
+/////////////////////////////////////////////////////////////////////
 // project.
 enum em_RecFormatFrequency
 {
@@ -566,6 +626,7 @@ private:
         CGICmd::st_Status status;
         CGICmd::st_Imaging imaging;
         CGICmd::st_Cameraoperation cameraoperation;
+        CGICmd::st_Tally tally;
         CGICmd::st_Project project;
         CGICmd::st_Network network;
         CGICmd::st_Stream stream;
@@ -1072,6 +1133,58 @@ public:
 
 
     /////////////////////////////////////////////////////////////////
+    // tally.
+    void set_tally_GTallyLampEnable(CGICmd::COMMON::em_OnOff val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "GTallyLampEnable=" + str;
+        set_command<CGICmd::st_Tally>(msg);
+    }
+
+    void set_tally_GTallyControl(CGICmd::em_TurnOnOff val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "GTallyControl=" + str;
+        set_command<CGICmd::st_Tally>(msg);
+    }
+
+    void set_tally_TallyControlMode(CGICmd::em_InternalExternal val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "TallyControlMode=" + str;
+        set_command<CGICmd::st_Tally>(msg);
+    }
+
+    void set_tally_RTallyControl(CGICmd::em_TurnOnOff val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "RTallyControl=" + str;
+        set_command<CGICmd::st_Tally>(msg);
+    }
+
+    void set_tally_TallyLampBrightness(CGICmd::em_OffLowHigh val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "TallyLampBrightness=" + str;
+        set_command<CGICmd::st_Tally>(msg);
+    }
+
+    void set_tally_TallyLampBrightnessExtra(CGICmd::COMMON::em_OnOff val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "TallyLampBrightnessExtra=" + str;
+        set_command<CGICmd::st_Tally>(msg);
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
     // stream.
     void set_stream_StreamMode(CGICmd::em_StreamMode mode)
     {
@@ -1131,6 +1244,7 @@ public:
     auto &inquiry_status() { return cmd_info.status; }
     auto &inquiry_imaging() { return cmd_info.imaging; }
     auto &inquiry_cameraoperation() { return cmd_info.cameraoperation; }
+    auto &inquiry_tally() { return cmd_info.tally; }
     auto &inquiry_project() { return cmd_info.project; }
     auto &inquiry_network() { return cmd_info.network; }
     auto &inquiry_srt() { return cmd_info.srt; }
@@ -1169,6 +1283,7 @@ public:
             inquiry(cmdi.status);
             inquiry(cmdi.imaging);
             inquiry(cmdi.cameraoperation);
+            inquiry(cmdi.tally);
             inquiry(cmdi.project);
             inquiry(cmdi.network);
             inquiry(cmdi.stream);

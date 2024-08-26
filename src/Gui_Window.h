@@ -110,7 +110,7 @@ private:
         bool is_on = true;
         for (auto i = 0; i < 20; i++) {
             // Send Tally command.
-            auto color = IpNetwork::VISCA_Tally_Command::em_COLOR::RED;
+            auto color = tally_color_t::RED;
             visca_com->send_cmd_tally(color, is_on);
 
             is_on = !is_on;

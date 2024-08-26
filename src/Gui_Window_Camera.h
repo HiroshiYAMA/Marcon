@@ -242,6 +242,73 @@ private:
 
     StopWatch sw;
 
+    // blinking tally.
+    std::thread thd_blink_tally;
+    std::atomic_bool fin_thd_blink_tally;
+    float hue_blink_tally_button = 0.0f;
+    void blink_tally(bool green, bool red)
+    {
+        auto tally_bkup = cgi->inquiry_tally();
+
+        cgi->set_tally_GTallyLampEnable(CGICmd::COMMON::em_OnOff::ON);
+        cgi->set_tally_TallyControlMode(CGICmd::em_InternalExternal::EXTERNAL);
+        cgi->set_tally_TallyLampBrightness(CGICmd::em_OffLowHigh::HIGH);
+
+        bool is_on = true;
+        for (auto i = 0; i < 20; i++) {
+            // Send Tally command.
+            auto on_off = is_on ? CGICmd::em_TurnOnOff::TURN_ON : CGICmd::em_TurnOnOff::TURN_OFF;
+            if (green) cgi->set_tally_GTallyControl(on_off);
+            if (red) cgi->set_tally_RTallyControl(on_off);
+            is_on = !is_on;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        }
+
+        // restore.
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        cgi->set_tally_GTallyLampEnable(tally_bkup.GTallyLampEnable);
+        cgi->set_tally_TallyControlMode(tally_bkup.TallyControlMode);
+        cgi->set_tally_TallyLampBrightness(tally_bkup.TallyLampBrightness);
+        cgi->set_tally_GTallyControl(tally_bkup.GTallyControl);
+        cgi->set_tally_RTallyControl(tally_bkup.RTallyControl);
+
+        fin_thd_blink_tally.store(true);
+    }
+
+    void show_panel_blink_tally(bool green, bool red)
+    {
+        ImGuiStyle& style = ImGui::GetStyle();
+        const auto text_size = ImGui::CalcTextSize("A");
+        const auto pad_frame = style.FramePadding;
+        const ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+
+        auto is_set_color = false;
+        constexpr auto hue_max = 8.0f;
+        auto idx_btn_text = static_cast<int>(hue_blink_tally_button * 4) % 4;
+        auto btn_text = fin_thd_blink_tally.load() ? "@T@##Tally"
+            : idx_btn_text == 0 ? " | ##Tally"
+            : idx_btn_text == 1 ? " / ##Tally"
+            : idx_btn_text == 2 ? " - ##Tally"
+            : " \\ ##tally"
+            ;
+        if (!fin_thd_blink_tally.load()) {
+            set_style_color(hue_blink_tally_button / hue_max, 0.7f, 0.7f);
+            hue_blink_tally_button += 0.1f;
+            if (hue_blink_tally_button > hue_max) hue_blink_tally_button = 0.0f;
+            is_set_color = true;
+        }
+        if (ImGui::Button(btn_text, ImVec2(0, btn_size.y))) {
+            if (!thd_blink_tally.joinable()) {
+                fin_thd_blink_tally.store(false);
+                std::thread thd_tmp{ [&]{ blink_tally(green, red); }};
+                thd_blink_tally = std::move(thd_tmp);
+            }
+        }
+        if (thd_blink_tally.joinable() && fin_thd_blink_tally.load()) thd_blink_tally.join();
+        if (is_set_color) reset_style_color();
+    }
+
     // print selected camera info.
     void show_panel_print_selected_camera_info()
     {
@@ -761,6 +828,10 @@ private:
                                     stat_main_bkup = stat_main;
                                     stat_main = em_State::LIVE_VIEW;
                                 }
+
+                                ImGui::SameLine();
+
+                                show_panel_blink_tally(false, true);
                             }
                         }
                         ImGui::EndTable();
@@ -2666,6 +2737,8 @@ public:
         std::tie(tex_internalFormat, tex_format) = get_format(tex_type, RGB_CH_NUM);
         tex_id = make_texture(0, GL_TEXTURE_2D, tex_width, tex_height, 0, tex_type, RGB_CH_NUM);
 
+        fin_thd_blink_tally.store(true);
+
         // is_display_image = false;
 
         {
@@ -2686,6 +2759,10 @@ public:
     }
 
     virtual ~Gui_Window_Camera() {
+        if (thd_blink_tally.joinable()) {
+            thd_blink_tally.join();
+        }
+
         if (is_CONNECTED()) DISCONNECT();
 
         if (tex_id > 0) glDeleteTextures(1, &tex_id);
@@ -2804,17 +2881,33 @@ public:
         bool is_window_opened = true;
         ImGui::Begin(str, &is_window_opened, window_flags);
         {
-            auto p = ImGui::GetCursorScreenPos();
-            auto win_size = ImGui::GetWindowSize();
-
             show_panel_live_view(tex_width);
+
+            {
+                ImGui::SetCursorScreenPos(win_pos);
+                if (ImGui::BeginChild("##Tally", ImVec2(0, 0), false, window_flags)) {
+                    ImGuiStyle& style = ImGui::GetStyle();
+                    const auto text_size = ImGui::CalcTextSize("@T@");
+                    const auto pad_frame = style.FramePadding;
+                    const auto pad_win = style.WindowPadding;
+                    const ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+                    ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y));
+
+                    show_panel_blink_tally(false, true);
+                }
+                ImGui::EndChild();
+            }
 
             if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 stat_main = stat_main_bkup;
             }
 
-            auto is_hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
-            if (is_hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            // auto is_hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+            // if (is_hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+            //     stat_main = stat_main_bkup;
+            // }
+            auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+            if (is_drag_left) {
                 stat_main = stat_main_bkup;
             }
         }
