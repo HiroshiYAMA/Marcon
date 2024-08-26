@@ -101,6 +101,7 @@ private:
     std::thread thd_blink_tally;
     std::atomic_bool fin_thd_blink_tally;
     float hue_blink_tally_button = 0.0f;
+    std::string blink_tally_remote_server;
     using tally_color_t = IpNetwork::VISCA_Tally_Command::em_COLOR;
     void blink_tally(const std::string &name, tally_color_t color = tally_color_t::RED)
     {
@@ -227,13 +228,13 @@ private:
         auto is_set_color = false;
         constexpr auto hue_max = 8.0f;
         auto idx_btn_text = static_cast<int>(hue_blink_tally_button * 4) % 4;
-        auto btn_text = fin_thd_blink_tally.load() ? "@T@##Tally"
+        auto btn_text = fin_thd_blink_tally.load() || (ip_address != blink_tally_remote_server) ? "@T@##Tally"
             : idx_btn_text == 0 ? " | ##Tally"
             : idx_btn_text == 1 ? " / ##Tally"
             : idx_btn_text == 2 ? " - ##Tally"
             : " \\ ##tally"
             ;
-        if (!fin_thd_blink_tally.load()) {
+        if (!fin_thd_blink_tally.load() && (ip_address == blink_tally_remote_server)) {
             set_style_color(hue_blink_tally_button / hue_max, 0.7f, 0.7f);
             hue_blink_tally_button += 0.1f;
             if (hue_blink_tally_button > hue_max) hue_blink_tally_button = 0.0f;
@@ -242,6 +243,7 @@ private:
         if (ImGui::Button(btn_text, ImVec2(0, btn_size.y))) {
             if (!thd_blink_tally.joinable()) {
                 fin_thd_blink_tally.store(false);
+                blink_tally_remote_server = ip_address;
                 std::thread thd_tmp{ [&]{ blink_tally(ip_address); }};
                 thd_blink_tally = std::move(thd_tmp);
             }
