@@ -965,7 +965,7 @@ protected:
 	static constexpr uint8_t MASK_SOCKET = 0x0F;
 
 public:
-	packet_type pack()
+	packet_type pack() override
 	{
 		return {};	// TODO: implenent.
 	}
