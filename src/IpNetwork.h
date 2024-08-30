@@ -1070,6 +1070,98 @@ public:
 
 
 
+class VISCA_PanTilt_Command : public VISCA_Command
+{
+public:
+	enum class em_UpDown
+	{
+		UP = 0x01,
+		DOWN = 0x02,
+		STOP = 0x03,
+	};
+
+	enum class em_LeftRight
+	{
+		LEFT = 0x01,
+		RIGHT = 0x02,
+		STOP = 0x03,
+	};
+
+	static constexpr uint8_t SPEED_MIN = 1;
+	static constexpr uint8_t SPEED_MAX = 50;
+
+private:
+	static constexpr uint8_t Category_Code = 0x06;
+
+	static constexpr uint8_t PanTiltMove_Code = 0x01;
+	static constexpr uint8_t PanTiltHome_Code = 0x04;
+	static constexpr uint8_t PanTiltReset_Code = 0x05;
+
+	uint8_t pan_speed = SPEED_MIN;
+	uint8_t tilt_speed = SPEED_MIN;
+	em_UpDown up_down = em_UpDown::STOP;
+	em_LeftRight left_right = em_LeftRight::STOP;
+	std::vector<uint8_t> cmd_data;
+
+public:
+	packet_type pack() override
+	{
+		packet_type pkt;
+
+		pkt = head;
+		pkt.push_back(Category_Code);
+		pkt.insert(pkt.end(), cmd_data.begin(), cmd_data.end());
+		pkt.push_back(VISCA::END_MARK);
+
+		return pkt;
+	}
+
+	void unpack(const packet_type &pkt) override
+	{
+		;	// TODO: implement.
+	}
+
+	void set_pan_tilt(uint8_t pan, uint8_t tilt, em_LeftRight lr, em_UpDown ud)
+	{
+		pan_speed = std::clamp(pan, SPEED_MIN, SPEED_MAX);
+		tilt_speed = std::clamp(tilt, SPEED_MIN, SPEED_MAX);
+		up_down = ud;
+		left_right = lr;
+
+		cmd_data.clear();
+		cmd_data.push_back(PanTiltMove_Code);
+		cmd_data.push_back(pan_speed);
+		cmd_data.push_back(tilt_speed);
+		cmd_data.push_back(static_cast<uint8_t>(left_right));
+		cmd_data.push_back(static_cast<uint8_t>(up_down));
+	}
+	void set_up    (uint8_t val) { set_pan_tilt(SPEED_MIN, val, em_LeftRight::STOP, em_UpDown::UP); }
+	void set_down  (uint8_t val) { set_pan_tilt(SPEED_MIN, val, em_LeftRight::STOP, em_UpDown::DOWN); }
+	void set_left  (uint8_t val) { set_pan_tilt(val, SPEED_MIN, em_LeftRight::LEFT, em_UpDown::STOP); }
+	void set_right (uint8_t val) { set_pan_tilt(val, SPEED_MIN, em_LeftRight::RIGHT, em_UpDown::STOP); }
+	void set_up_left   (uint8_t pan, uint8_t tilt) { set_pan_tilt(pan, tilt, em_LeftRight::LEFT, em_UpDown::UP); }
+	void set_up_right  (uint8_t pan, uint8_t tilt) { set_pan_tilt(pan, tilt, em_LeftRight::RIGHT, em_UpDown::UP); }
+	void set_down_left (uint8_t pan, uint8_t tilt) { set_pan_tilt(pan, tilt, em_LeftRight::LEFT, em_UpDown::DOWN); }
+	void set_down_right(uint8_t pan, uint8_t tilt) { set_pan_tilt(pan, tilt, em_LeftRight::RIGHT, em_UpDown::DOWN); }
+	void set_stop() { set_pan_tilt(SPEED_MIN, SPEED_MIN, em_LeftRight::STOP, em_UpDown::STOP); }
+
+	void set_home() {
+		cmd_data.clear();
+		cmd_data.push_back(PanTiltHome_Code);
+	}
+
+	void set_reset() {
+		cmd_data.clear();
+		cmd_data.push_back(PanTiltReset_Code);
+	}
+
+	VISCA_PanTilt_Command() {}
+
+	virtual ~VISCA_PanTilt_Command() {}
+};
+
+
+
 class VISCA_IP : public IData
 {
 public:
@@ -1996,17 +2088,135 @@ public:
 		return {};
 	}
 
+	VISCA_IP make_visca_ip(VISCA_Command &cmd)
+	{
+		auto payload = cmd.pack();
+
+		VISCA_IP visca_ip;
+		visca_ip.set_command(payload);
+
+		return visca_ip;
+	}
+
 	// Send Tally command.
 	bool send_cmd_tally(VISCA_Tally_Command::em_COLOR color, bool is_on)
 	{
 		VISCA_Tally_Command cmd;
 		cmd.set_tally_color(color);
 		cmd.set_tally_on(is_on);
-		auto payload = cmd.pack();
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
 
-		VISCA_IP visca_ip;
-		visca_ip.set_command(payload);
+		return ret;
+	}
 
+	// Send Pan Tilt command.
+	bool send_cmd_pan_tilt(uint8_t pan, uint8_t tilt, VISCA_PanTilt_Command::em_LeftRight lr, VISCA_PanTilt_Command::em_UpDown ud)
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_pan_tilt(pan, tilt, lr, ud);
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+	bool send_pt_up(uint8_t val)
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_up(val);
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+	bool send_pt_down(uint8_t val)
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_down(val);
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+	bool send_pt_left(uint8_t val)
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_left(val);
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+	bool send_pt_right(uint8_t val)
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_right(val);
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+	bool send_pt_up_left(uint8_t pan, uint8_t tilt)
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_up_left(pan, tilt);
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+	bool send_pt_up_right(uint8_t pan, uint8_t tilt)
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_up_right(pan, tilt);
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+	bool send_pt_down_left(uint8_t pan, uint8_t tilt)
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_down_left(pan, tilt);
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+	bool send_pt_down_right(uint8_t pan, uint8_t tilt)
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_down_right(pan, tilt);
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+	bool send_cmd_pt_stop()
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_stop();
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+
+	bool send_cmd_pt_home()
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_home();
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+
+	bool send_cmd_pt_reset()
+	{
+		VISCA_PanTilt_Command cmd;
+		cmd.set_reset();
+		auto visca_ip = make_visca_ip(cmd);
 		auto ret = send(visca_ip);
 
 		return ret;

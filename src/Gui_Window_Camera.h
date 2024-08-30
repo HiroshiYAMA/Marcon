@@ -30,6 +30,7 @@
 #include "RemoteServer.h"
 #include "ProcLiveView.h"
 #include "CGI.h"
+#include "IpNetwork.h"
 
 #include "Gui_Window_Keyboard.h"
 
@@ -236,9 +237,13 @@ private:
     std::thread thd_proc_live_view;
     // bool is_display_image;
 
+    // CGI.
     std::unique_ptr<CGI> cgi;
     std::thread thd_cgi_inq;
     std::thread thd_cgi_set;
+
+    // VISCA.
+    std::unique_ptr<IpNetwork::VISCA_Com> visca_com;
 
     StopWatch sw;
 
@@ -2885,17 +2890,54 @@ public:
 
             {
                 ImGui::SetCursorScreenPos(win_pos);
-                if (ImGui::BeginChild("##Tally", ImVec2(0, 0), false, window_flags)) {
+                if (ImGui::BeginChild("##Function", ImVec2(0, 0), false, window_flags)) {
                     ImGuiStyle& style = ImGui::GetStyle();
-                    const auto text_size = ImGui::CalcTextSize("@T@");
                     const auto pad_frame = style.FramePadding;
                     const auto pad_win = style.WindowPadding;
-                    const ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+                    auto text_size = ImGui::CalcTextSize("@T@");
+                    ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
                     ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y));
 
                     show_panel_blink_tally(false, true);
-                }
+
+                    text_size = ImGui::CalcTextSize("Reset");
+                    btn_size = ImVec2(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+                    ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y + (win_size.y - btn_size.y - pad_win.y)));
+                    if (ImGui::Button("Reset##PAN_TILT", btn_size)) {
+                        visca_com->send_cmd_pt_reset();
+                    }
+               }
                 ImGui::EndChild();
+            }
+
+            // pan, tilt.
+            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                visca_com->send_cmd_pt_home();
+
+            } else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                using pt_cmd = IpNetwork::VISCA_PanTilt_Command;
+                auto &io = ImGui::GetIO();
+                auto mouse_pos = io.MouseClickedPos[ImGuiMouseButton_Left];
+                auto center = ImGui::GetMainViewport()->GetCenter();
+                if (std::abs(mouse_pos.x - center.x) < win_size.x / 10
+                    && std::abs(mouse_pos.y - center.y) < win_size.x / 10
+                ) {
+                    auto [delta, length] = get_mouse_dragging_delta_rainbow(ImGuiMouseButton_Left);
+                    // auto rad = std::atan2(delta.y, delta.x);
+                    // auto deg = rad * 180.0f / M_PI;
+                    // if (deg < 0.0f) deg += 360.0f;
+                    // std::cout << "(delta, length) = " << delta.x << ", " << delta.y << ", " << length << " / " << deg << std::endl;
+                    auto lr = delta.x >= 0.0f ? pt_cmd::em_LeftRight::RIGHT : pt_cmd::em_LeftRight::LEFT;
+                    auto ud = delta.y >= 0.0f ? pt_cmd::em_UpDown::DOWN : pt_cmd::em_UpDown::UP;
+                    const auto r_max = win_size.y / 2 * 0.8f;
+                    const auto spd_max = pt_cmd::SPEED_MAX;
+                    auto pan = std::abs(std::clamp(delta.x / r_max, -1.0f, 1.0f) * spd_max);
+                    auto tilt = std::abs(std::clamp(delta.y / r_max, -1.0f, 1.0f) * spd_max);
+                    visca_com->send_cmd_pan_tilt(pan, tilt, lr, ud);
+                }
+
+            } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+                visca_com->send_cmd_pt_stop();
             }
 
             if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
@@ -2907,7 +2949,10 @@ public:
             //     stat_main = stat_main_bkup;
             // }
             auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
-            if (is_drag_left) {
+            if (is_drag_left
+                && std::abs(mouse_delta.x) > win_size.x * 0.8f
+                && std::abs(mouse_delta.y) < win_size.y * 0.2f
+            ) {
                 stat_main = stat_main_bkup;
             }
         }
@@ -3138,7 +3183,10 @@ public:
             }
         }
 
-        auto ret = (ret_inq && ret_set);
+        visca_com = IpNetwork::VISCA_Com::Create(remote_server.ip_address);
+        bool ret_visca = visca_com ? true : false;
+
+        auto ret = (ret_inq && ret_set && ret_visca);
 
         if (ret) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));   // TODO: wait event.

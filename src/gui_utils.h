@@ -112,6 +112,35 @@ extern void display_texture(GLuint texID, GLsizei width, GLsizei height, std::st
     const std::vector<std::string> info_str = {});
 
 
+inline auto get_mouse_dragging_delta = [](ImGuiMouseButton button, ImVec4 col = ImGui::GetStyleColorVec4(ImGuiCol_Button)) -> auto {
+    ImVec2 delta(0, 0);
+
+    if (ImGui::IsMouseDragging(button)) {
+        auto &io = ImGui::GetIO();
+        auto pos_clicked = io.MouseClickedPos[button];
+        auto pos_cur = io.MousePos;
+        ImGui::GetForegroundDrawList()->AddLine(pos_clicked, pos_cur, ImGui::GetColorU32(col), 4.0f);
+        delta = ImVec2(pos_cur.x - pos_clicked.x, pos_cur.y - pos_clicked.y);
+    }
+
+    auto len = std::sqrt(std::pow(delta.x, 2.0f) + std::pow(delta.y, 2.0f));
+
+    return std::make_tuple(delta, len);
+};
+
+inline auto get_mouse_dragging_delta_rainbow = [](ImGuiMouseButton button) -> auto {
+    auto &io = ImGui::GetIO();
+    auto vec = ImVec2(io.MouseClickedPos[button].x - io.MousePos.x, io.MouseClickedPos[button].y - io.MousePos.y);
+    auto len = std::sqrt(std::pow(vec.x, 2.0f) + std::pow(vec.y, 2.0f));
+    auto hue = len / 140.0f;
+    hue = hue - std::floor(hue);
+    auto col = (ImVec4)ImColor::HSV(hue, 0.6f, 0.6f);
+
+    auto [delta, length] = get_mouse_dragging_delta(button, col);
+
+    return std::make_tuple(delta, length);
+};
+
 inline auto get_mouse_drag_delta = [](ImGuiMouseButton button, ImVec4 col = ImGui::GetStyleColorVec4(ImGuiCol_Button)) -> ImVec2 {
     ImVec2 delta(0, 0);
 
