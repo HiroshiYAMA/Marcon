@@ -2678,6 +2678,44 @@ private:
 
 
 
+    void show_panel_pan_tilt()
+    {
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
+
+        // pan, tilt.
+        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+            visca_com->send_cmd_pt_home();
+
+        } else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            using pt_cmd = IpNetwork::VISCA_PanTilt_Command;
+            auto &io = ImGui::GetIO();
+            auto mouse_pos = io.MouseClickedPos[ImGuiMouseButton_Left];
+            auto center = ImGui::GetMainViewport()->GetCenter();
+            if (std::abs(mouse_pos.x - center.x) < win_size.x / 10
+                && std::abs(mouse_pos.y - center.y) < win_size.x / 10
+            ) {
+                auto [delta, length] = get_mouse_dragging_delta_rainbow(ImGuiMouseButton_Left);
+                // auto rad = std::atan2(delta.y, delta.x);
+                // auto deg = rad * 180.0f / M_PI;
+                // if (deg < 0.0f) deg += 360.0f;
+                // std::cout << "(delta, length) = " << delta.x << ", " << delta.y << ", " << length << " / " << deg << std::endl;
+                auto lr = delta.x >= 0.0f ? pt_cmd::em_LeftRight::RIGHT : pt_cmd::em_LeftRight::LEFT;
+                auto ud = delta.y >= 0.0f ? pt_cmd::em_UpDown::DOWN : pt_cmd::em_UpDown::UP;
+                const auto r_max = win_size.y / 2 * 0.8f;
+                const auto spd_max = pt_cmd::SPEED_MAX;
+                auto pan = std::abs(std::clamp(delta.x / r_max, -1.0f, 1.0f) * spd_max);
+                auto tilt = std::abs(std::clamp(delta.y / r_max, -1.0f, 1.0f) * spd_max);
+                visca_com->send_cmd_pan_tilt(pan, tilt, lr, ud);
+            }
+
+        } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+            visca_com->send_cmd_pt_stop();
+        }
+    }
+
+
+
     double calc_fps() const
     {
         int fps = 30;
@@ -2910,35 +2948,7 @@ public:
                 ImGui::EndChild();
             }
 
-            // pan, tilt.
-            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-                visca_com->send_cmd_pt_home();
-
-            } else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-                using pt_cmd = IpNetwork::VISCA_PanTilt_Command;
-                auto &io = ImGui::GetIO();
-                auto mouse_pos = io.MouseClickedPos[ImGuiMouseButton_Left];
-                auto center = ImGui::GetMainViewport()->GetCenter();
-                if (std::abs(mouse_pos.x - center.x) < win_size.x / 10
-                    && std::abs(mouse_pos.y - center.y) < win_size.x / 10
-                ) {
-                    auto [delta, length] = get_mouse_dragging_delta_rainbow(ImGuiMouseButton_Left);
-                    // auto rad = std::atan2(delta.y, delta.x);
-                    // auto deg = rad * 180.0f / M_PI;
-                    // if (deg < 0.0f) deg += 360.0f;
-                    // std::cout << "(delta, length) = " << delta.x << ", " << delta.y << ", " << length << " / " << deg << std::endl;
-                    auto lr = delta.x >= 0.0f ? pt_cmd::em_LeftRight::RIGHT : pt_cmd::em_LeftRight::LEFT;
-                    auto ud = delta.y >= 0.0f ? pt_cmd::em_UpDown::DOWN : pt_cmd::em_UpDown::UP;
-                    const auto r_max = win_size.y / 2 * 0.8f;
-                    const auto spd_max = pt_cmd::SPEED_MAX;
-                    auto pan = std::abs(std::clamp(delta.x / r_max, -1.0f, 1.0f) * spd_max);
-                    auto tilt = std::abs(std::clamp(delta.y / r_max, -1.0f, 1.0f) * spd_max);
-                    visca_com->send_cmd_pan_tilt(pan, tilt, lr, ud);
-                }
-
-            } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-                visca_com->send_cmd_pt_stop();
-            }
+            show_panel_pan_tilt();
 
             if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 stat_main = stat_main_bkup;
