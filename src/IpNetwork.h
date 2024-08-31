@@ -2192,16 +2192,22 @@ public:
 		return visca_ip;
 	}
 
+	bool send_visca_ip(VISCA_Command &cmd)
+	{
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+
 	// Send Tally command.
 	bool send_cmd_tally(VISCA_Tally_Command::em_COLOR color, bool is_on)
 	{
 		VISCA_Tally_Command cmd;
 		cmd.set_tally_color(color);
 		cmd.set_tally_on(is_on);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 
 	// Send Pan Tilt command.
@@ -2209,111 +2215,87 @@ public:
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_pan_tilt(pan, tilt, lr, ud);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 	bool send_pt_up(uint8_t val)
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_up(val);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 	bool send_pt_down(uint8_t val)
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_down(val);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 	bool send_pt_left(uint8_t val)
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_left(val);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 	bool send_pt_right(uint8_t val)
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_right(val);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 	bool send_pt_up_left(uint8_t pan, uint8_t tilt)
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_up_left(pan, tilt);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 	bool send_pt_up_right(uint8_t pan, uint8_t tilt)
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_up_right(pan, tilt);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 	bool send_pt_down_left(uint8_t pan, uint8_t tilt)
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_down_left(pan, tilt);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 	bool send_pt_down_right(uint8_t pan, uint8_t tilt)
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_down_right(pan, tilt);
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 	bool send_cmd_pt_stop()
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_stop();
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 
 	bool send_cmd_pt_home()
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_home();
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 
 	bool send_cmd_pt_reset()
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_reset();
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 
 	// Send Zoom command.
@@ -2325,10 +2307,8 @@ public:
 		} else {
 			cmd.set_zoom(val >> 12, tw);
 		}
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 
 	bool send_cmd_zm_tele(int32_t val, bool is_highreso = true)
@@ -2339,10 +2319,8 @@ public:
 		} else {
 			cmd.set_tele(val >> 12);
 		}
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 
 	bool send_cmd_zm_wide(int32_t val, bool is_highreso = true)
@@ -2353,10 +2331,8 @@ public:
 		} else {
 			cmd.set_wide(val >> 12);
 		}
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 
 	bool send_cmd_zm_stop(bool is_highreso = true)
@@ -2367,10 +2343,8 @@ public:
 		} else {
 			cmd.set_stop();
 		}
-		auto visca_ip = make_visca_ip(cmd);
-		auto ret = send(visca_ip);
 
-		return ret;
+		return send_visca_ip(cmd);
 	}
 
 	VISCA_Com() {}
