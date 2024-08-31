@@ -1162,6 +1162,100 @@ public:
 
 
 
+class VISCA_Zoom_Command : public VISCA_Command
+{
+public:
+	enum class em_TeleWide
+	{
+		TELE = 0x02,
+		WIDE = 0x03,
+		STOP = 0x00,
+	};
+
+	static constexpr auto SPEED_MIN = 0;
+	static constexpr auto SPEED_MAX = 7;
+	static constexpr auto SPEED_HIGHRESO_MIN = 0;
+	static constexpr auto SPEED_HIGHRESO_MAX = 0x7FFE;
+
+private:
+	const uint8_t Category_Code = 0x04;
+	const uint8_t Ext_Category_Code = 0x7E;
+
+	static constexpr uint8_t Zoom_Code = 0x07;
+	static constexpr uint8_t ZoomHighReso_Code = 0x17;
+
+	int zoom_speed = SPEED_MIN;
+	int zoom_highreso_speed = SPEED_HIGHRESO_MIN;
+	em_TeleWide tele_wide = em_TeleWide::STOP;
+	std::vector<uint8_t> cmd_data;
+
+	bool is_highreso = false;
+
+public:
+	packet_type pack() override
+	{
+		packet_type pkt;
+
+		pkt = head;
+		if (is_highreso) pkt.push_back(Ext_Category_Code);
+		pkt.push_back(Category_Code);
+		pkt.insert(pkt.end(), cmd_data.begin(), cmd_data.end());
+		pkt.push_back(VISCA::END_MARK);
+
+		return pkt;
+	}
+
+	void unpack(const packet_type &pkt) override
+	{
+		;	// TODO: implement.
+	}
+
+	void set_zoom(int zoom, em_TeleWide tw)
+	{
+		zoom_speed = std::clamp(zoom, SPEED_MIN, SPEED_MAX);
+		tele_wide = tw;
+
+		cmd_data.clear();
+		cmd_data.push_back(Zoom_Code);
+		uint8_t val = (static_cast<uint8_t>(tele_wide) << 4) | (zoom_speed & 0xF);
+		cmd_data.push_back(val);
+
+		disable_highreso();
+	}
+	void set_tele(int8_t val) { set_zoom(val, em_TeleWide::TELE); }
+	void set_wide(int8_t val) { set_zoom(val, em_TeleWide::WIDE); }
+	void set_stop() { set_zoom(0, em_TeleWide::STOP); }
+
+	void set_zoom_highreso(int32_t zoom, em_TeleWide tw)
+	{
+		zoom_highreso_speed = std::clamp(zoom, SPEED_HIGHRESO_MIN, SPEED_HIGHRESO_MAX);
+		tele_wide = tw;
+
+		cmd_data.clear();
+		cmd_data.push_back(ZoomHighReso_Code);
+		cmd_data.push_back(static_cast<uint8_t>(tele_wide));
+		cmd_data.push_back((zoom_highreso_speed >> 12) & 0x0F);
+		cmd_data.push_back((zoom_highreso_speed >> 8) & 0x0F);
+		cmd_data.push_back((zoom_highreso_speed >> 4) & 0x0F);
+		cmd_data.push_back(zoom_highreso_speed & 0x0F);
+
+		enable_highreso();
+	}
+	void set_tele_highreso(int32_t val) { set_zoom_highreso(val, em_TeleWide::TELE); }
+	void set_wide_highreso(int32_t val) { set_zoom_highreso(val, em_TeleWide::WIDE); }
+	void set_stop_highreso() { set_zoom_highreso(0, em_TeleWide::STOP); }
+
+	void set_highreso(bool val) { is_highreso = val; }
+	void enable_highreso() { set_highreso(true); }
+	void disable_highreso() { set_highreso(false); }
+
+	VISCA_Zoom_Command() {}
+
+	virtual ~VISCA_Zoom_Command() {}
+};
+
+
+
 class VISCA_IP : public IData
 {
 public:
@@ -2216,6 +2310,63 @@ public:
 	{
 		VISCA_PanTilt_Command cmd;
 		cmd.set_reset();
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+
+	// Send Zoom command.
+	bool send_cmd_zoom(int32_t val, VISCA_Zoom_Command::em_TeleWide tw, bool is_highreso = true)
+	{
+		VISCA_Zoom_Command cmd;
+		if (is_highreso) {
+			cmd.set_zoom_highreso(val, tw);
+		} else {
+			cmd.set_zoom(val >> 12, tw);
+		}
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+
+	bool send_cmd_zm_tele(int32_t val, bool is_highreso = true)
+	{
+		VISCA_Zoom_Command cmd;
+		if (is_highreso) {
+			cmd.set_tele_highreso(val);
+		} else {
+			cmd.set_tele(val >> 12);
+		}
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+
+	bool send_cmd_zm_wide(int32_t val, bool is_highreso = true)
+	{
+		VISCA_Zoom_Command cmd;
+		if (is_highreso) {
+			cmd.set_wide_highreso(val);
+		} else {
+			cmd.set_wide(val >> 12);
+		}
+		auto visca_ip = make_visca_ip(cmd);
+		auto ret = send(visca_ip);
+
+		return ret;
+	}
+
+	bool send_cmd_zm_stop(bool is_highreso = true)
+	{
+		VISCA_Zoom_Command cmd;
+		if (is_highreso) {
+			cmd.set_stop_highreso();
+		} else {
+			cmd.set_stop();
+		}
 		auto visca_ip = make_visca_ip(cmd);
 		auto ret = send(visca_ip);
 
