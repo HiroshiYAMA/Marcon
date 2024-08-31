@@ -1222,11 +1222,11 @@ public:
 
 		disable_highreso();
 	}
-	void set_tele(int8_t val) { set_zoom(val, em_TeleWide::TELE); }
-	void set_wide(int8_t val) { set_zoom(val, em_TeleWide::WIDE); }
+	void set_tele(int val) { set_zoom(val, em_TeleWide::TELE); }
+	void set_wide(int val) { set_zoom(val, em_TeleWide::WIDE); }
 	void set_stop() { set_zoom(0, em_TeleWide::STOP); }
 
-	void set_zoom_highreso(int32_t zoom, em_TeleWide tw)
+	void set_zoom_highreso(int zoom, em_TeleWide tw)
 	{
 		zoom_highreso_speed = std::clamp(zoom, SPEED_HIGHRESO_MIN, SPEED_HIGHRESO_MAX);
 		tele_wide = tw;
@@ -1241,8 +1241,8 @@ public:
 
 		enable_highreso();
 	}
-	void set_tele_highreso(int32_t val) { set_zoom_highreso(val, em_TeleWide::TELE); }
-	void set_wide_highreso(int32_t val) { set_zoom_highreso(val, em_TeleWide::WIDE); }
+	void set_tele_highreso(int val) { set_zoom_highreso(val, em_TeleWide::TELE); }
+	void set_wide_highreso(int val) { set_zoom_highreso(val, em_TeleWide::WIDE); }
 	void set_stop_highreso() { set_zoom_highreso(0, em_TeleWide::STOP); }
 
 	void set_highreso(bool val) { is_highreso = val; }
@@ -1252,6 +1252,89 @@ public:
 	VISCA_Zoom_Command() {}
 
 	virtual ~VISCA_Zoom_Command() {}
+};
+
+
+
+class VISCA_Focus_Command : public VISCA_Command
+{
+public:
+	enum class em_NearFar
+	{
+		FAR = 0x02,
+		NEAR = 0x03,
+		STOP = 0x00,
+	};
+
+	enum class em_Mode
+	{
+		AUTO = 0x02,
+		MANUAL = 0x03,
+		TOGGLE = 0x10,
+	};
+
+	static constexpr auto SPEED_MIN = 0;
+	static constexpr auto SPEED_MAX = 7;
+
+private:
+	const uint8_t Category_Code = 0x04;
+
+	static constexpr uint8_t Focus_Code = 0x08;
+	static constexpr uint8_t Mode_Code = 0x38;
+
+	int focus_speed = SPEED_MIN;
+	em_NearFar near_far = em_NearFar::STOP;
+	std::vector<uint8_t> cmd_data;
+
+	em_Mode mode = em_Mode::MANUAL;
+
+public:
+	packet_type pack() override
+	{
+		packet_type pkt;
+
+		pkt = head;
+		pkt.push_back(Category_Code);
+		pkt.insert(pkt.end(), cmd_data.begin(), cmd_data.end());
+		pkt.push_back(VISCA::END_MARK);
+
+		return pkt;
+	}
+
+	void unpack(const packet_type &pkt) override
+	{
+		;	// TODO: implement.
+	}
+
+	void set_focus(int focus, em_NearFar nf)
+	{
+		focus_speed = std::clamp(focus, SPEED_MIN, SPEED_MAX);
+		near_far = nf;
+
+		cmd_data.clear();
+		cmd_data.push_back(Focus_Code);
+		uint8_t val = (static_cast<uint8_t>(near_far) << 4) | (focus_speed & 0xF);
+		cmd_data.push_back(val);
+	}
+	void set_near(int val) { set_focus(val, em_NearFar::NEAR); }
+	void set_far(int val) { set_focus(val, em_NearFar::FAR); }
+	void set_stop(){ set_focus(0, em_NearFar::STOP); }
+
+	void set_mode(em_Mode val)
+	{
+		mode = val;
+
+		cmd_data.clear();
+		cmd_data.push_back(Mode_Code);
+		cmd_data.push_back(static_cast<uint8_t>(mode));
+	}
+	void set_mode_auto() { set_mode(em_Mode::AUTO); }
+	void set_mode_manual() { set_mode(em_Mode::MANUAL); }
+	void set_mode_toggle() { set_mode(em_Mode::TOGGLE); }
+
+	VISCA_Focus_Command() {}
+
+	virtual ~VISCA_Focus_Command() {}
 };
 
 
@@ -2299,7 +2382,7 @@ public:
 	}
 
 	// Send Zoom command.
-	bool send_cmd_zoom(int32_t val, VISCA_Zoom_Command::em_TeleWide tw, bool is_highreso = true)
+	bool send_cmd_zoom(int val, VISCA_Zoom_Command::em_TeleWide tw, bool is_highreso = true)
 	{
 		VISCA_Zoom_Command cmd;
 		if (is_highreso) {
@@ -2311,7 +2394,7 @@ public:
 		return send_visca_ip(cmd);
 	}
 
-	bool send_cmd_zm_tele(int32_t val, bool is_highreso = true)
+	bool send_cmd_zm_tele(int val, bool is_highreso = true)
 	{
 		VISCA_Zoom_Command cmd;
 		if (is_highreso) {
@@ -2323,7 +2406,7 @@ public:
 		return send_visca_ip(cmd);
 	}
 
-	bool send_cmd_zm_wide(int32_t val, bool is_highreso = true)
+	bool send_cmd_zm_wide(int val, bool is_highreso = true)
 	{
 		VISCA_Zoom_Command cmd;
 		if (is_highreso) {
@@ -2343,6 +2426,71 @@ public:
 		} else {
 			cmd.set_stop();
 		}
+
+		return send_visca_ip(cmd);
+	}
+
+	// Send Focus command.
+	bool send_cmd_focus(int val, VISCA_Focus_Command::em_NearFar nf)
+	{
+		VISCA_Focus_Command cmd;
+		cmd.set_focus(val, nf);
+
+		return send_visca_ip(cmd);
+	}
+
+	bool send_cmd_focus_near(int val)
+	{
+		VISCA_Focus_Command cmd;
+		cmd.set_near(val);
+
+		return send_visca_ip(cmd);
+	}
+
+	bool send_cmd_focus_far(int val)
+	{
+		VISCA_Focus_Command cmd;
+		cmd.set_far(val);
+
+		return send_visca_ip(cmd);
+	}
+
+	bool send_cmd_focus_stop()
+	{
+		VISCA_Focus_Command cmd;
+		cmd.set_stop();
+
+		return send_visca_ip(cmd);
+	}
+
+	bool send_cmd_focus_mode(VISCA_Focus_Command::em_Mode mode)
+	{
+		VISCA_Focus_Command cmd;
+		cmd.set_mode(mode);
+
+		return send_visca_ip(cmd);
+	}
+
+	bool send_cmd_focus_auto()
+	{
+		VISCA_Focus_Command cmd;
+		cmd.set_mode_auto();
+
+		return send_visca_ip(cmd);
+	}
+
+	bool send_cmd_focus_manual()
+	{
+		VISCA_Focus_Command cmd;
+		cmd.set_mode_manual();
+
+		return send_visca_ip(cmd);
+	}
+
+	bool send_cmd_focus_toggle()
+	{
+		VISCA_Focus_Command cmd;
+		cmd.set_mode_toggle();
 
 		return send_visca_ip(cmd);
 	}

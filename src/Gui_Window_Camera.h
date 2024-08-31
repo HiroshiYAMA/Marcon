@@ -2694,18 +2694,18 @@ private:
 
             } else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
                 using pt_cmd = IpNetwork::VISCA_PanTilt_Command;
-                    auto [delta, length] = get_mouse_dragging_delta_rainbow(ImGuiMouseButton_Left);
-                    // auto rad = std::atan2(delta.y, delta.x);
-                    // auto deg = rad * 180.0f / M_PI;
-                    // if (deg < 0.0f) deg += 360.0f;
-                    // std::cout << "(delta, length) = " << delta.x << ", " << delta.y << ", " << length << " / " << deg << std::endl;
-                    auto lr = delta.x >= 0.0f ? pt_cmd::em_LeftRight::RIGHT : pt_cmd::em_LeftRight::LEFT;
-                    auto ud = delta.y >= 0.0f ? pt_cmd::em_UpDown::DOWN : pt_cmd::em_UpDown::UP;
-                    const auto r_max = win_size.y / 2 * 0.8f;
-                    const auto spd_max = pt_cmd::SPEED_MAX;
-                    auto pan = std::abs(std::clamp(delta.x / r_max, -1.0f, 1.0f) * spd_max);
-                    auto tilt = std::abs(std::clamp(delta.y / r_max, -1.0f, 1.0f) * spd_max);
-                    visca_com->send_cmd_pan_tilt(pan, tilt, lr, ud);
+                auto [delta, length] = get_mouse_dragging_delta_rainbow(ImGuiMouseButton_Left);
+                // auto rad = std::atan2(delta.y, delta.x);
+                // auto deg = rad * 180.0f / M_PI;
+                // if (deg < 0.0f) deg += 360.0f;
+                // std::cout << "(delta, length) = " << delta.x << ", " << delta.y << ", " << length << " / " << deg << std::endl;
+                auto lr = delta.x >= 0.0f ? pt_cmd::em_LeftRight::RIGHT : pt_cmd::em_LeftRight::LEFT;
+                auto ud = delta.y >= 0.0f ? pt_cmd::em_UpDown::DOWN : pt_cmd::em_UpDown::UP;
+                const auto r_max = win_size.y / 2 * 0.8f;
+                const auto spd_max = pt_cmd::SPEED_MAX;
+                auto pan = std::abs(std::clamp(delta.x / r_max, -1.0f, 1.0f) * spd_max);
+                auto tilt = std::abs(std::clamp(delta.y / r_max, -1.0f, 1.0f) * spd_max);
+                visca_com->send_cmd_pan_tilt(pan, tilt, lr, ud);
 
             } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
                 visca_com->send_cmd_pt_stop();
@@ -2728,18 +2728,56 @@ private:
 
             } else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
                 using zm_cmd = IpNetwork::VISCA_Zoom_Command;
-                    auto [delta, length] = get_mouse_dragging_delta_rainbow(ImGuiMouseButton_Left);
-                    auto rad = std::atan2(delta.y, delta.x);
-                    auto deg = rad * 180.0f / M_PI;
-                    if (deg < 0.0f) deg += 360.0f;
+                auto [delta, length] = get_mouse_dragging_delta_rainbow(ImGuiMouseButton_Left);
+                auto rad = std::atan2(delta.y, delta.x);
+                auto deg = rad * 180.0f / M_PI;
+                if (deg < 0.0f) deg += 360.0f;
 
-                    auto tw = delta.y >= 0.0f ? zm_cmd::em_TeleWide::WIDE : zm_cmd::em_TeleWide::TELE;
-                    const auto r_max = win_size.y * 0.8f;
-                    auto zoom = std::abs(std::clamp(delta.y / r_max, -1.0f, 1.0f) * zm_cmd::SPEED_HIGHRESO_MAX);
-                    visca_com->send_cmd_zoom(zoom, tw);
+                constexpr auto dt = 15;
+                if (!(deg > (90 - dt) && deg < (90 + dt) || deg > (270 - dt) && deg < (270 + dt))) return;
+
+                auto tw = delta.y >= 0.0f ? zm_cmd::em_TeleWide::WIDE : zm_cmd::em_TeleWide::TELE;
+                const auto r_max = win_size.y * 0.8f;
+                auto zoom = std::abs(std::clamp(delta.y / r_max, -1.0f, 1.0f) * zm_cmd::SPEED_HIGHRESO_MAX);
+                visca_com->send_cmd_zoom(zoom, tw);
 
             } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
                 visca_com->send_cmd_zm_stop();
+            }
+        }
+    }
+
+
+
+    void show_panel_focus()
+    {
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
+
+        auto &io = ImGui::GetIO();
+        auto mouse_pos = io.MouseClickedPos[ImGuiMouseButton_Left];
+        if (mouse_pos.x > win_size.x / 3 *  2) {
+            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+                ;
+
+            } else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+                using focus_cmd = IpNetwork::VISCA_Focus_Command;
+                auto [delta, length] = get_mouse_dragging_delta_rainbow(ImGuiMouseButton_Left);
+                auto rad = std::atan2(delta.y, delta.x);
+                auto deg = rad * 180.0f / M_PI;
+                if (deg < 0.0f) deg += 360.0f;
+
+                constexpr auto dt = 15;
+                if (!(deg > (90 - dt) && deg < (90 + dt) || deg > (270 - dt) && deg < (270 + dt))) return;
+
+                auto nf = delta.y >= 0.0f ? focus_cmd::em_NearFar::FAR : focus_cmd::em_NearFar::NEAR;
+                const auto r_max = win_size.y * 0.8f;
+                auto focus = std::abs(std::clamp(delta.y / r_max, -1.0f, 1.0f) * focus_cmd::SPEED_MAX);
+                visca_com->send_cmd_focus_manual();
+                visca_com->send_cmd_focus(focus, nf);
+
+            } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+                visca_com->send_cmd_focus_stop();
             }
         }
     }
@@ -2980,6 +3018,7 @@ public:
 
             show_panel_pan_tilt();
             show_panel_zoom();
+            show_panel_focus();
 
             if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 stat_main = stat_main_bkup;
