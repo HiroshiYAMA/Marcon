@@ -258,6 +258,7 @@ private:
     std::thread thd_blink_tally;
     std::atomic_bool fin_thd_blink_tally;
     float hue_blink_tally_button = 0.0f;
+#if 0
     void blink_tally(bool green, bool red)
     {
         auto tally_bkup = cgi->inquiry_tally();
@@ -287,7 +288,29 @@ private:
 
         fin_thd_blink_tally.store(true);
     }
+#else
+    using tally_color_t = IpNetwork::VISCA_Tally_Command::em_COLOR;
+    void blink_tally(const std::string &name, tally_color_t color = tally_color_t::RED)
+    {
+        std::unique_ptr<IpNetwork::VISCA_Com> visca_com;
+        visca_com = IpNetwork::VISCA_Com::Create(name);
 
+        bool is_on = true;
+        for (auto i = 0; i < 20; i++) {
+            // Send Tally command.
+            auto color = tally_color_t::RED;
+            visca_com->send_cmd_tally(color, is_on);
+
+            is_on = !is_on;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
+        }
+
+        fin_thd_blink_tally.store(true);
+    }
+#endif
+
+#if 0
     void show_panel_blink_tally(bool green, bool red)
     {
         ImGuiStyle& style = ImGui::GetStyle();
@@ -320,6 +343,40 @@ private:
         if (thd_blink_tally.joinable() && fin_thd_blink_tally.load()) thd_blink_tally.join();
         if (is_set_color) reset_style_color();
     }
+#else
+    void show_panel_blink_tally(const std::string &ip_address)
+    {
+        ImGuiStyle& style = ImGui::GetStyle();
+        const auto text_size = ImGui::CalcTextSize("A");
+        const auto pad_frame = style.FramePadding;
+        const ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+
+        auto is_set_color = false;
+        constexpr auto hue_max = 8.0f;
+        auto idx_btn_text = static_cast<int>(hue_blink_tally_button * 4) % 4;
+        auto btn_text = fin_thd_blink_tally.load() ? "@T@##Tally"
+            : idx_btn_text == 0 ? " | ##Tally"
+            : idx_btn_text == 1 ? " / ##Tally"
+            : idx_btn_text == 2 ? " - ##Tally"
+            : " \\ ##tally"
+            ;
+        if (!fin_thd_blink_tally.load()) {
+            set_style_color(hue_blink_tally_button / hue_max, 0.7f, 0.7f);
+            hue_blink_tally_button += 0.1f;
+            if (hue_blink_tally_button > hue_max) hue_blink_tally_button = 0.0f;
+            is_set_color = true;
+        }
+        if (ImGui::Button(btn_text, ImVec2(0, btn_size.y))) {
+            if (!thd_blink_tally.joinable()) {
+                fin_thd_blink_tally.store(false);
+                std::thread thd_tmp{ [&]{ blink_tally(ip_address); }};
+                thd_blink_tally = std::move(thd_tmp);
+            }
+        }
+        if (thd_blink_tally.joinable() && fin_thd_blink_tally.load()) thd_blink_tally.join();
+        if (is_set_color) reset_style_color();
+    }
+#endif
 
     // print selected camera info.
     void show_panel_print_selected_camera_info()
@@ -843,7 +900,8 @@ private:
 
                                 ImGui::SameLine();
 
-                                show_panel_blink_tally(false, true);
+                                // show_panel_blink_tally(false, true);
+                                show_panel_blink_tally(remote_server.ip_address);
                             }
                         }
                         ImGui::EndTable();
@@ -3074,7 +3132,8 @@ public:
                     ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
                     ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y));
 
-                    show_panel_blink_tally(false, true);
+                    // show_panel_blink_tally(false, true);
+                    show_panel_blink_tally(remote_server.ip_address);
 
                     // select PTZ, FOCUS.
                     {
