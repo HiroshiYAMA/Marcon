@@ -81,6 +81,11 @@ public:
         LIVE_VIEW,
     };
 
+    enum class em_Ptzf_State {
+        PTZ,
+        FOCUS,
+    };
+
     enum class em_StateShutter {
         MODE,
         CONTROL,
@@ -198,6 +203,8 @@ private:
 
     em_State stat_main = em_State::MAIN;
     em_State stat_main_bkup = em_State::MAIN;
+
+    em_Ptzf_State stat_ptzf = em_Ptzf_State::PTZ;
 
     // shutter.
     em_StateShutter stat_shutter = em_StateShutter::CONTROL;
@@ -2676,7 +2683,68 @@ private:
         ImGui::PopID();
     }
 
+    void show_panel_ptz_setting()
+    {
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 win_pos(viewport->WorkPos.x * vis_xscale, viewport->WorkPos.y * vis_xscale);
+        ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
 
+        ImGuiStyle& style = ImGui::GetStyle();
+        const auto pad_frame = style.FramePadding;
+        const auto pad_win = style.WindowPadding;
+
+        auto text_size = ImGui::CalcTextSize("Reset");
+        auto btn_size = ImVec2(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+        ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y + (win_size.y - btn_size.y - pad_win.y)));
+        if (ImGui::Button("Reset##PAN_TILT", btn_size)) {
+            visca_com->send_cmd_pt_reset();
+        }
+    }
+
+    void show_panel_touch_focus_setting()
+    {
+        const ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 win_pos(viewport->WorkPos.x * vis_xscale, viewport->WorkPos.y * vis_xscale);
+        ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        const auto pad_frame = style.FramePadding;
+        const auto pad_win = style.WindowPadding;
+
+        auto &ptzf = cgi->inquiry_ptzf();
+        auto focus_mode = ptzf.FocusMode;
+        auto text = (focus_mode == CGICmd::em_AutoManual::AUTO) ? "Auto" : "Manual";
+        auto text_size = ImGui::CalcTextSize(text);
+        auto btn_size = ImVec2(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+        ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y + (win_size.y - (btn_size.y + pad_win.y) * 3)));
+        if (ImGui::Button(text, btn_size)) {
+            auto mode = (focus_mode == CGICmd::em_AutoManual::AUTO)
+                ? CGICmd::em_AutoManual::MANUAL
+                : CGICmd::em_AutoManual::AUTO
+                ;
+            cgi->set_ptzf_FocusMode(mode);
+        }
+
+        auto touch_mode = ptzf.TouchFocusInMF;
+        text = (touch_mode == CGICmd::em_TouchFocusInMF::TRACKING_AF) ? "Tracking" : "Spot";
+        text_size = ImGui::CalcTextSize(text);
+        btn_size = ImVec2(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+        ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y + (win_size.y - (btn_size.y + pad_win.y) * 2)));
+        if (ImGui::Button(text, btn_size)) {
+            auto mode = (touch_mode == CGICmd::em_TouchFocusInMF::TRACKING_AF)
+                ? CGICmd::em_TouchFocusInMF::SPOT_FOCUS
+                : CGICmd::em_TouchFocusInMF::TRACKING_AF
+                ;
+            cgi->set_ptzf_TouchFocusInMF(mode);
+        }
+
+        text_size = ImGui::CalcTextSize("Tr Cancel");
+        btn_size = ImVec2(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+        ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y + (win_size.y - btn_size.y - pad_win.y)));
+        if (ImGui::Button("Tr Cancel##FOCUS", btn_size)) {
+            cgi->click_ptzf_FocusTrackingCancel();
+        }
+    }
 
     void show_panel_pan_tilt()
     {
@@ -2713,8 +2781,6 @@ private:
         }
     }
 
-
-
     void show_panel_zoom()
     {
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -2747,8 +2813,6 @@ private:
         }
     }
 
-
-
     void show_panel_focus()
     {
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -2779,6 +2843,21 @@ private:
             } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
                 visca_com->send_cmd_focus_stop();
             }
+        }
+    }
+
+    void show_panel_touch_focus()
+    {
+        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+            const ImGuiViewport* viewport = ImGui::GetMainViewport();
+            ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
+
+            auto &io = ImGui::GetIO();
+            auto mouse_pos = io.MouseClickedPos[ImGuiMouseButton_Left];
+
+            int x = mouse_pos.x * CGICmd::st_Ptzf::POS_X_MAX / (win_size.x - 1) + 0.5f;
+            int y = mouse_pos.y * CGICmd::st_Ptzf::POS_Y_MAX / (win_size.y - 1) + 0.5f;
+            cgi->set_ptzf_FocusTrackingPosition(x, y);
         }
     }
 
@@ -3006,19 +3085,44 @@ public:
 
                     show_panel_blink_tally(false, true);
 
-                    text_size = ImGui::CalcTextSize("Reset");
-                    btn_size = ImVec2(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
-                    ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y + (win_size.y - btn_size.y - pad_win.y)));
-                    if (ImGui::Button("Reset##PAN_TILT", btn_size)) {
-                        visca_com->send_cmd_pt_reset();
+                    // select PTZ, FOCUS.
+                    {
+                        auto text = (stat_ptzf == em_Ptzf_State::PTZ) ? "Focus" : "PTZ";
+                        auto text_size = ImGui::CalcTextSize(text);
+                        ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
+                        ImGui::SetCursorScreenPos(ImVec2(win_pos.x, win_pos.y + (win_size.y - btn_size.y - pad_win.y)));
+                        if (ImGui::Button(text, btn_size)) {
+                            if (stat_ptzf == em_Ptzf_State::PTZ) {
+                                stat_ptzf = em_Ptzf_State::FOCUS;
+                            } else {
+                                stat_ptzf = em_Ptzf_State::PTZ;
+                            }
+                        }
+                    }
+
+                    switch(stat_ptzf) {
+                    case em_Ptzf_State::PTZ:
+                        show_panel_ptz_setting();
+                        break;
+
+                    case em_Ptzf_State::FOCUS:
+                        show_panel_touch_focus_setting();
+                        break;
+
+                    default:
+                        ;
                     }
                }
                 ImGui::EndChild();
             }
 
-            show_panel_pan_tilt();
-            show_panel_zoom();
-            show_panel_focus();
+            if (stat_ptzf == em_Ptzf_State::PTZ) {
+                show_panel_pan_tilt();
+                show_panel_zoom();
+                show_panel_focus();
+            } else if (stat_ptzf == em_Ptzf_State::FOCUS) {
+                show_panel_touch_focus();
+            }
 
             if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
                 stat_main = stat_main_bkup;
@@ -3213,7 +3317,13 @@ public:
 
             case em_State::LIVE_VIEW:
                 {
+                    auto is_update = cgi->is_update_cmd_info();
+
+                    if (is_update) cgi->fetch();
+
                     is_window_opened = display_live_view(win_id);
+
+                    if (is_update) cgi->next();
                 }
                 break;
             default:

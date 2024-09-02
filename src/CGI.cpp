@@ -24,55 +24,6 @@
 
 namespace CGICmd
 {
-
-inline auto conv_str2num = [](const std::string &str, int &num) -> bool {
-    try
-    {
-        num = std::stoi(str);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return false;
-    }
-
-    return true;
-};
-
-inline auto conv_json_str2num = [](const njson& j, const char *key, int &num) -> bool {
-    std::string str;
-    json_get_val(j, key, str);
-    auto ret = conv_str2num(str, num);
-
-    return ret;
-};
-
-inline auto conv_range2str = [](const CGICmd::st_Range &range) -> std::string {
-    std::stringstream ss;
-    ss << range.min << ", " << range.max;
-    std::string range_str = ss.str();
-
-    return range_str;
-};
-
-inline auto conv_json_str2range = [](const njson& j, const char *key, CGICmd::st_Range &range) -> bool {
-    std::string range_str;
-    json_get_val(j, key, range_str);
-    std::stringstream ss{range_str};
-    std::string str;
-    std::vector<std::string> v;
-    while (std::getline(ss, str, ',')) v.push_back(str);
-
-    bool ret = false;
-    if (v.size() >= 2) {
-        ret = conv_str2num(v[0], range.min) && conv_str2num(v[1], range.max);
-    }
-
-    return ret;
-};
-
-
-
 // json <---> st_Imaging.
 // shutter.
 constexpr auto EXPOSURE_ANGLE = "ExposureAngle";
@@ -110,7 +61,7 @@ constexpr auto EXPOSURE_AUTO_ND_FILTER_ENABLE = "ExposureAutoNDFilterEnable";
 constexpr auto EXPOSURE_ND_CLEAR = "ExposureNDClear";
 constexpr auto EXPOSURE_ND_VARIABLE = "ExposureNDVariable";
 //
-void to_json(njson& j, const CGICmd::st_Imaging& p) {
+void to_json(njson& j, const st_Imaging& p) {
     // shutter.
     j[EXPOSURE_ANGLE] = std::to_string(p.ExposureAngle);
     j[EXPOSURE_ANGLE_RANGE] = conv_range2str(p.ExposureAngleRange);
@@ -147,7 +98,7 @@ void to_json(njson& j, const CGICmd::st_Imaging& p) {
     j[EXPOSURE_ND_CLEAR] = p.ExposureNDClear;
     j[EXPOSURE_ND_VARIABLE] = std::to_string(p.ExposureNDVariable);
 }
-void from_json(const njson& j, CGICmd::st_Imaging& p) {
+void from_json(const njson& j, st_Imaging& p) {
     // shutter.
     conv_json_str2num(j, EXPOSURE_ANGLE, p.ExposureAngle);
     conv_json_str2range(j, EXPOSURE_ANGLE_RANGE, p.ExposureAngleRange);
@@ -193,13 +144,13 @@ constexpr auto HOST_NAME = "Hostname";
 constexpr auto MAC_ADDRESS = "MacAddress";
 constexpr auto CAMERA_NAME = "CameraName";
 //
-void to_json(njson& j, const CGICmd::st_Network& p) {
+void to_json(njson& j, const st_Network& p) {
     j[HTTP_PORT] = std::to_string(p.HttpPort);
     j[HOST_NAME] = p.Hostname;
     j[MAC_ADDRESS] = p.MacAddress;
     j[CAMERA_NAME] = p.CameraName;
 }
-void from_json(const njson& j, CGICmd::st_Network& p) {
+void from_json(const njson& j, st_Network& p) {
     conv_json_str2num(j, HTTP_PORT, p.HttpPort);
     json_get_val(j, HOST_NAME, p.Hostname);
     json_get_val(j, MAC_ADDRESS, p.MacAddress);
@@ -215,14 +166,14 @@ constexpr auto SRT_PASSPHRASE_USED = "SrtPassphraseUsed";
 //
 constexpr auto SRT_LISTEN_PORT = "SrtListenPort";
 //
-void to_json(njson& j, const CGICmd::st_Srt& p) {
+void to_json(njson& j, const st_Srt& p) {
     j[SRT_ENCRYPTION] = p.SrtEncryption;
     j[SRT_PASSPHRASE] = p.SrtPassphrase;
     j[SRT_PASSPHRASE_USED] = p.SrtPassphraseUsed;
     //
     j[SRT_LISTEN_PORT] = std::to_string(p.SrtListenPort);
 }
-void from_json(const njson& j, CGICmd::st_Srt& p) {
+void from_json(const njson& j, st_Srt& p) {
     json_get_val(j, SRT_ENCRYPTION, p.SrtEncryption);
     json_get_val(j, SRT_PASSPHRASE, p.SrtPassphrase);
     json_get_val(j, SRT_PASSPHRASE_USED, p.SrtPassphraseUsed);

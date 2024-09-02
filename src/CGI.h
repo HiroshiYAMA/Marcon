@@ -89,6 +89,83 @@ NLOHMANN_JSON_SERIALIZE_ENUM( em_PressRelease, {
 
 
 
+struct st_Param2
+{
+    union {
+        int v1;
+        int min;
+        int x;
+    };
+    union {
+        int v2;
+        int max;
+        int y;
+    };
+};
+using st_Range = st_Param2;
+using st_Position = st_Param2;
+
+inline auto conv_str2num = [](const std::string &str, int &num) -> bool {
+    try
+    {
+        num = std::stoi(str);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return false;
+    }
+
+    return true;
+};
+
+inline auto conv_json_str2num = [](const njson& j, const char *key, int &num) -> bool {
+    std::string str;
+    json_get_val(j, key, str);
+    auto ret = conv_str2num(str, num);
+
+    return ret;
+};
+
+inline auto conv_param22str = [](const st_Param2 &prm2) -> std::string {
+    std::stringstream ss;
+    ss << prm2.v1 << "," << prm2.v2;
+    std::string param2_str = ss.str();
+
+    return param2_str;
+};
+inline auto conv_range2str = [](const st_Range &range) -> std::string {
+    return conv_param22str(range);
+};
+inline auto conv_position2str = [](const st_Position &pos) -> std::string {
+    return conv_param22str(pos);
+};
+
+inline auto conv_json_str2param2 = [](const njson& j, const char *key, st_Param2 &prm2) -> bool {
+    std::string param2_str;
+    json_get_val(j, key, param2_str);
+    std::stringstream ss{param2_str};
+    std::string str;
+    std::vector<std::string> v;
+    while (std::getline(ss, str, ',')) v.push_back(str);
+
+    bool ret = false;
+    if (v.size() >= 2) {
+        ret = conv_str2num(v[0], prm2.v1) && conv_str2num(v[1], prm2.v2);
+    }
+
+    return ret;
+};
+inline auto conv_json_str2range = [](const njson& j, const char *key, st_Range &range) -> bool {
+    return conv_json_str2param2(j, key, range);
+};
+inline auto conv_json_str2position = [](const njson& j, const char *key, st_Position &pos) -> bool {
+    return conv_json_str2param2(j, key, pos);
+};
+
+
+
+
 /////////////////////////////////////////////////////////////////////
 // system.
 enum em_Power
@@ -157,13 +234,58 @@ struct st_Status
 {
     static constexpr auto cmd = "status";
 
-    CGICmd::COMMON::em_TrueFalse TemperatureWarning;
+    COMMON::em_TrueFalse TemperatureWarning;
 
 public:
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(
         st_Status,
 
         TemperatureWarning
+    )
+};
+
+
+
+/////////////////////////////////////////////////////////////////////
+// ptzf.
+enum em_AutoManual
+{
+    AUTO,
+    MANUAL,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_AutoManual, {
+    {AUTO, "auto"},
+    {MANUAL, "manual"},
+})
+
+enum em_TouchFocusInMF
+{
+    TRACKING_AF,
+    SPOT_FOCUS,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_TouchFocusInMF, {
+    {TRACKING_AF, "tracking_af"},
+    {SPOT_FOCUS, "spot_focus"},
+})
+
+struct st_Ptzf
+{
+    static constexpr auto cmd = "ptzf";
+
+    static constexpr auto POS_X_MAX = 640 - 1;
+    static constexpr auto POS_Y_MAX = 480 - 1;
+
+    em_AutoManual FocusMode;
+    COMMON::em_PressRelease FocusTrackingCancel;
+    st_Position FocusTrackingPosition;
+    em_TouchFocusInMF TouchFocusInMF;
+
+public:
+    NLOHMANN_DEFINE_TYPE_INTRUSIVE(
+        st_Ptzf,
+
+        FocusMode,
+        TouchFocusInMF
     )
 };
 
@@ -291,12 +413,6 @@ enum class em_NDModeState
 };
 
 
-
-struct st_Range
-{
-    int min;
-    int max;
-};
 
 struct st_Imaging
 {
@@ -594,14 +710,14 @@ struct st_Srt
 
 
 
-void to_json(njson& j, const CGICmd::st_Imaging& p);
-void from_json(const njson& j, CGICmd::st_Imaging& p);
+void to_json(njson& j, const st_Imaging& p);
+void from_json(const njson& j, st_Imaging& p);
 
-void to_json(njson& j, const CGICmd::st_Network& p);
-void from_json(const njson& j, CGICmd::st_Network& p);
+void to_json(njson& j, const st_Network& p);
+void from_json(const njson& j, st_Network& p);
 
-void to_json(njson& j, const CGICmd::st_Srt& p);
-void from_json(const njson& j, CGICmd::st_Srt& p);
+void to_json(njson& j, const st_Srt& p);
+void from_json(const njson& j, st_Srt& p);
 
 }   // namespace CGICmd.
 
@@ -624,6 +740,7 @@ private:
     {
         CGICmd::st_System system;
         CGICmd::st_Status status;
+        CGICmd::st_Ptzf ptzf;
         CGICmd::st_Imaging imaging;
         CGICmd::st_Cameraoperation cameraoperation;
         CGICmd::st_Tally tally;
@@ -789,6 +906,53 @@ public:
         cmd_msg_list->Write(msg);
         is_update_cmd_msg_list.store(true);
         cv_cmd_msg.notify_one();
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // ptzf.
+    void set_ptzf_FocusMode(CGICmd::em_AutoManual val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "FocusMode=" + str;
+        set_command<CGICmd::st_Ptzf>(msg);
+    }
+
+    void click_ptzf_FocusTrackingCancel()
+    {
+        std::string msg;
+
+        // press.
+        msg = "FocusTrackingCancel=" + json_conv_enum2str(CGICmd::COMMON::PRESS);
+        set_command<CGICmd::st_Ptzf>(msg);
+
+        // wait for sending 'press' command.
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        // release.
+        msg = "FocusTrackingCancel=" + json_conv_enum2str(CGICmd::COMMON::RELEASE);
+        set_command<CGICmd::st_Ptzf>(msg);
+    }
+
+    void set_ptzf_FocusTrackingPosition(int x, int y)
+    {
+        std::string msg;
+        x = std::clamp(x, 0, CGICmd::st_Ptzf::POS_X_MAX);
+        y = std::clamp(y, 0, CGICmd::st_Ptzf::POS_Y_MAX);
+        CGICmd::st_Position pos{x, y};
+        auto str = CGICmd::conv_position2str(pos);
+        msg = "FocusTrackingPosition=" + str;
+        set_command<CGICmd::st_Ptzf>(msg);
+    }
+
+    void set_ptzf_TouchFocusInMF(CGICmd::em_TouchFocusInMF val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "TouchFocusInMF=" + str;
+        set_command<CGICmd::st_Ptzf>(msg);
     }
 
 
@@ -1242,6 +1406,7 @@ public:
     }
     auto &inquiry_system() { return cmd_info.system; }
     auto &inquiry_status() { return cmd_info.status; }
+    auto &inquiry_ptzf() { return cmd_info.ptzf; }
     auto &inquiry_imaging() { return cmd_info.imaging; }
     auto &inquiry_cameraoperation() { return cmd_info.cameraoperation; }
     auto &inquiry_tally() { return cmd_info.tally; }
@@ -1281,6 +1446,7 @@ public:
             inquiry(cmdi.system);
             if (timeout || !connected) continue;
             inquiry(cmdi.status);
+            inquiry(cmdi.ptzf);
             inquiry(cmdi.imaging);
             inquiry(cmdi.cameraoperation);
             inquiry(cmdi.tally);
