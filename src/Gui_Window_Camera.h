@@ -2757,7 +2757,7 @@ private:
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
 
-        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+        if (is_double_click()) {
             visca_com->send_cmd_pt_home();
 
         } else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -2785,7 +2785,7 @@ private:
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
 
-        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+        if (is_double_click()) {
             ;
 
         } else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -2813,7 +2813,7 @@ private:
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
 
-        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+        if (is_double_click()) {
             ;
 
         } else if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -2839,7 +2839,7 @@ private:
 
     void show_panel_touch_focus()
     {
-        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+        if (is_double_click()) {
             const ImGuiViewport* viewport = ImGui::GetMainViewport();
             ImVec2 win_size(viewport->WorkSize.x * vis_xscale, viewport->WorkSize.y * vis_xscale);
 
@@ -3128,7 +3128,7 @@ public:
                 auto &io = ImGui::GetIO();
                 auto mouse_pos = io.MouseClickedPos[ImGuiMouseButton_Left];
 
-                if ((mouse_pos.x > win_size.x / 5) && (mouse_pos.x < win_size.x / 5 * 4)) show_panel_focus();
+                if (mouse_pos.x < win_size.x / 16) show_panel_focus();
 
                 show_panel_touch_focus();
             }

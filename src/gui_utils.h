@@ -191,6 +191,13 @@ inline auto is_mouse_drag_to_right = [](ImGuiMouseButton button) -> std::tuple<b
     return { ret, mouse_delta };
 };
 
+inline auto is_double_click = []() -> bool {
+    bool ret = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)
+        || (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsKeyDown(ImGuiKey_Enter));
+
+        return ret;
+};
+
 
 // ボタンの色(In-Active, Hovered, Active)を設定する //
 extern void set_style_color(float hue, float sat, float val, float a = 1.0f);
