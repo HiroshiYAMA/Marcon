@@ -2770,7 +2770,7 @@ private:
                 constexpr auto dt = 15;
                 if (!(deg > (90 - dt) && deg < (90 + dt) || deg > (270 - dt) && deg < (270 + dt))) return;
 
-                auto nf = delta.y >= 0.0f ? focus_cmd::em_NearFar::FAR : focus_cmd::em_NearFar::NEAR;
+                auto nf = delta.y >= 0.0f ? focus_cmd::em_NearFar::NEAR : focus_cmd::em_NearFar::FAR;
                 const auto r_max = win_size.y * 0.8f;
                 auto focus = std::abs(std::clamp(delta.y / r_max, -1.0f, 1.0f) * focus_cmd::SPEED_MAX);
                 visca_com->send_cmd_focus_manual();
