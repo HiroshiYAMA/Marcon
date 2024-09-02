@@ -2693,12 +2693,14 @@ private:
         const auto pad_frame = style.FramePadding;
         const auto pad_win = style.WindowPadding;
 
+        set_style_color(0.0f / 7.0f);
         auto text_size = ImGui::CalcTextSize("Reset");
         auto btn_size = ImVec2(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
         ImGui::SetCursorScreenPos(ImVec2(win_pos.x + (win_size.x - btn_size.x - pad_win.x), win_pos.y + (win_size.y - btn_size.y - pad_win.y)));
         if (ImGui::Button("Reset##PAN_TILT", btn_size)) {
             visca_com->send_cmd_pt_reset();
         }
+        reset_style_color();
     }
 
     void show_panel_touch_focus_setting()
@@ -2710,6 +2712,8 @@ private:
         ImGuiStyle& style = ImGui::GetStyle();
         const auto pad_frame = style.FramePadding;
         const auto pad_win = style.WindowPadding;
+
+        set_style_color(2.0f / 7.0f);
 
         auto &ptzf = cgi->inquiry_ptzf();
         auto focus_mode = ptzf.FocusMode;
@@ -2744,6 +2748,8 @@ private:
         if (ImGui::Button("Tr Cancel##FOCUS", btn_size)) {
             cgi->click_ptzf_FocusTrackingCancel();
         }
+
+        reset_style_color();
     }
 
     void show_panel_pan_tilt()
@@ -3072,6 +3078,8 @@ public:
 
                     // select PTZ, FOCUS.
                     {
+                        set_style_color(5.0f / 7.0f);
+
                         auto text = (stat_ptzf == em_Ptzf_State::PTZ) ? "Focus" : "PTZ";
                         auto text_size = ImGui::CalcTextSize(text);
                         ImVec2 btn_size(text_size.x + pad_frame.x * 2, (text_size.y + pad_frame.y) * 2);
@@ -3083,6 +3091,8 @@ public:
                                 stat_ptzf = em_Ptzf_State::PTZ;
                             }
                         }
+
+                        reset_style_color();
                     }
 
                     switch(stat_ptzf) {
