@@ -193,6 +193,7 @@ inline auto is_mouse_drag_to_right = [](ImGuiMouseButton button) -> std::tuple<b
 
 inline auto is_double_click = []() -> bool {
     bool ret = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)
+        || (ImGui::IsMouseDown(ImGuiMouseButton_Left) && ImGui::IsKeyPressed(ImGuiKey_Enter))
         || (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsKeyDown(ImGuiKey_Enter));
 
         return ret;
