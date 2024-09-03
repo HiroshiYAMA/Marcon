@@ -114,6 +114,69 @@ W キーが有効な時(MODE(another)がある時)は、
 アプリケーションを終了する。
 左右に 5 往復くらいかな。
 
+### Camera の IP アドレスの検索
+Launcher パネルの Search ボタンを押すとネットワーク内を検索する。
+
+<img src="images/Marcon_Launcher_before_IP_search.png" width="50%">
+
+IP アドレスが見つかると、三角形のボタンが現れる。
+このボタンを押すと IP アドレスがリストアップされ選択できる。
+
+<img src="images/Marcon_Launcher_after_IP_search.png" width="50%">
+
+### テキスト入力
+IP アドレス、ポート番号、ユーザー名、パスワードを入力する時に
+テキスト入力領域をクリック/タップすると、キー入力パネルがポップアップ表示される。
+入力できる文字は ASCII コード 0x00~0xFF の範囲内の英(大小)数字と記号と空白文字。
+
+#### キーレイアウト
+<img src="images/Marcon_Launcher_Input_layout.png" width="100%">
+
+<img src="images/Marcon_Launcher_Input_0.png" width="50%">
+
+<img src="images/Marcon_Launcher_Input_1.png" width="50%">
+
+<img src="images/Marcon_Launcher_Input_2.png" width="50%">
+
+### タリーランプ点滅
+Launcher パネル、Camera Main パネル、Live View パネルにある **"@T@"** ボタンを押すと
+タリー(赤)が約 3 秒間点滅する。
+
+<img src="images/Marcon_Camera_Main_panel.png" width="50%">
+
+### PTZF(パン、チルト、ズーム、フォーカス)操作
+PTZF 操作パネルとタッチフォーカス操作パネルとを切り替えながら操作する。
+切り替えは画面左下のボタン(PTZ, Focus)で行う。
+
+#### PTZF 操作パネル
+##### パン、チルト
+画面中央付近から上下左右方向にドラッグする。  
+正面に戻すには下記の操作をする。
+* 画面中央付近をダブルクリック/ダブルタップ
+* 画面中央付近をクリック/タップしたまま Enter キーを押す
+* Enter キーを押したまま画面中央付近をクリック/タップする
+
+##### ズーム
+画面左寄りの領域を上下にドラッグする。
+
+##### フォーカス(マニュアル)
+画面右寄りの領域を上下にドラッグする。
+
+<img src="images/Marcon_Camera_LiveView_PTZF.png" width="75%">
+
+パン、チルトをリセットするには画面右下の **"Reset"** ボタンを押す。
+
+<img src="images/Marcon_Camera_LiveView_PT_reset.png" width="75%">
+
+#### タッチフォーカス操作パネル
+画面のほぼ全域でタッチ操作が出来る。  
+タッチ操作は下記のいずれかで OK。
+* ダブルクリック/ダブルタップ
+* クリック/タップしたまま Enter キーを押す
+* Enter キーを押したままクリック/タップする
+
+<img src="images/Marcon_Camera_LiveView_TouchFocus.png" width="75%">
+
 ## Ubuntu のディスプレイ表示の回転
 時々、ディスプレイ表示が縦長なのがある。
 それを横長にするには、
