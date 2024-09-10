@@ -135,9 +135,10 @@ public:
             ImGui::InputText("##KEYBOARD", tmp_text.data(), tmp_text.capacity(), is_password ? ImGuiInputTextFlags_Password : ImGuiInputTextFlags_None);
             ImGui::PopItemWidth();
             ImGui::SameLine();
-            if (ImGui::Button("012", ImVec2(-1, 0))) {
+            if (ImGui::Button("a/0", ImVec2(-1, 0))) {
                 if (kb_pat == em_KeyboardPattern::LOWER || kb_pat == em_KeyboardPattern::UPPER) kb_pat = em_KeyboardPattern::NUMBER;
                 else if (kb_pat == em_KeyboardPattern::NUMBER || kb_pat == em_KeyboardPattern::SYMBOL) kb_pat = em_KeyboardPattern::LOWER;
+                else kb_pat = em_KeyboardPattern::LOWER;
             }
             ImGui::SetWindowFontScale(1.0f);
             text = std::string{ tmp_text.c_str() };
