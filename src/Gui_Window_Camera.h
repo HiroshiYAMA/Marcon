@@ -292,8 +292,9 @@ private:
     using tally_color_t = IpNetwork::VISCA_Tally_Command::em_COLOR;
     void blink_tally(const std::string &name, tally_color_t color = tally_color_t::RED)
     {
-        std::unique_ptr<IpNetwork::VISCA_Com> visca_com;
-        visca_com = IpNetwork::VISCA_Com::Create(name);
+        // backup & set.
+        auto tally_bkup = cgi->inquiry_tally();
+        cgi->set_comb_tally(CGICmd::COMMON::em_OnOff::ON, CGICmd::em_InternalExternal::EXTERNAL, CGICmd::em_OffLowHigh::HIGH);
 
         bool is_on = true;
         for (auto i = 0; i < 20; i++) {
@@ -305,6 +306,9 @@ private:
 
             std::this_thread::sleep_for(std::chrono::milliseconds(150));
         }
+
+        // restore.
+        cgi->set_comb_tally(tally_bkup.GTallyLampEnable, tally_bkup.TallyControlMode, tally_bkup.TallyLampBrightness);
 
         fin_thd_blink_tally.store(true);
     }

@@ -1346,6 +1346,17 @@ public:
         set_command<CGICmd::st_Tally>(msg);
     }
 
+    void set_comb_tally(CGICmd::COMMON::em_OnOff g_lamp_enable, CGICmd::em_InternalExternal mode, CGICmd::em_OffLowHigh brightness)
+    {
+        std::string msg;
+        msg = "GTallyLampEnable=" + json_conv_enum2str(g_lamp_enable);
+        msg += "&";
+        msg += "TallyControlMode=" + json_conv_enum2str(mode);
+        msg += "&";
+        msg += "TallyLampBrightness=" + json_conv_enum2str(brightness);
+        set_command<CGICmd::st_Tally>(msg);
+    }
+
 
 
     /////////////////////////////////////////////////////////////////
