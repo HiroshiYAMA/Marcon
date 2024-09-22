@@ -138,6 +138,27 @@ void from_json(const njson& j, st_Imaging& p) {
 
 
 
+// json <---> st_Project.
+constexpr auto BASE_SETTING_SHOOTING_MODE = "BaseSettingShootingMode";
+constexpr auto REC_FORMAT_FREQUENCY = "RecFormatFrequency";
+constexpr auto REC_FORMAT_VIDEOFORMAT = "RecFormatVideoFormat";
+constexpr auto REC_FORMAT_VIDEOFORMAT_LIST = "RecFormatVideoFormatList";
+//
+void to_json(njson& j, const st_Project& p) {
+    j[BASE_SETTING_SHOOTING_MODE] = p.BaseSettingShootingMode;
+    j[REC_FORMAT_FREQUENCY] = p.RecFormatFrequency;
+    j[REC_FORMAT_VIDEOFORMAT] = p.RecFormatVideoFormat;
+    j[REC_FORMAT_VIDEOFORMAT_LIST] = conv_list2str(p.RecFormatVideoFormatList);
+}
+void from_json(const njson& j, st_Project& p) {
+    json_get_val(j, BASE_SETTING_SHOOTING_MODE, p.BaseSettingShootingMode);
+    json_get_val(j, REC_FORMAT_FREQUENCY, p.RecFormatFrequency);
+    json_get_val(j, REC_FORMAT_VIDEOFORMAT, p.RecFormatVideoFormat);
+    conv_json_str2list(j, REC_FORMAT_VIDEOFORMAT_LIST, p.RecFormatVideoFormatList);
+}
+
+
+
 // json <---> st_Network.
 constexpr auto HTTP_PORT = "HttpPort";
 constexpr auto HOST_NAME = "Hostname";

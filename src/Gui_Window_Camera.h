@@ -2685,6 +2685,15 @@ private:
     {
         auto &project = cgi->inquiry_project();
         auto &val = project.RecFormatVideoFormat;
+        auto lst = project.RecFormatVideoFormatList.buf;
+        std::list<std::pair<CGICmd::em_RecFormatVideoFormat, std::string>> system_video_format_list;
+        for (auto &vf : lst) {
+            auto &vec = system_video_format;
+            auto itr = std::find_if(vec.begin(), vec.end(), [&vf](auto &e){ return e.first == vf; });
+            if (itr != vec.end()) {
+                system_video_format_list.push_back(*itr);
+            }
+        }
 
         auto f = [&](CGICmd::em_RecFormatVideoFormat val) -> void { cgi->set_project_RecFormatVideoFormat(val); };
 
@@ -2692,9 +2701,8 @@ private:
             "##SYSTEM_Control_VIDEO_FORMAT_SELECT",
             val,
             CGICmd::em_RecFormatVideoFormat::RecFormatVideoFormat_4096x2160p,
-            // CGICmd::em_RecFormatVideoFormat::RecFormatVideoFormat_1920x1080p_35,
-            CGICmd::em_RecFormatVideoFormat::RecFormatVideoFormat_1920x1080p,
-            system_video_format, f,
+            CGICmd::em_RecFormatVideoFormat::RecFormatVideoFormat_1920x1080p_35,
+            system_video_format_list, f,
             0.5f, 0.1f
         );
     }

@@ -163,6 +163,42 @@ inline auto conv_json_str2position = [](const njson& j, const char *key, st_Posi
     return conv_json_str2param2(j, key, pos);
 };
 
+template<typename T> struct st_List
+{
+    std::vector<T> buf;
+};
+
+inline auto conv_list2str = []<class T>(const st_List<T> &lst) -> std::string {
+    std::stringstream ss;
+    for (auto &e : lst.buf) {
+        auto str = json_conv_enum2str(e);
+        ss << str;
+        ss << ",";
+    }
+    auto str = ss.str();
+    if (!str.empty() && str.back() == ',') str.pop_back();
+
+    return str;
+};
+
+inline auto conv_json_str2list = []<class T>(const njson& j, const char *key, st_List<T> &lst) -> bool {
+    std::string list_str;
+    json_get_val(j, key, list_str);
+    std::stringstream ss{list_str};
+    std::string str;
+    std::vector<std::string> v;
+    while (std::getline(ss, str, ',')) v.push_back(str);
+
+    lst.buf.clear();
+    for (auto &e : v) {
+        njson j = e;
+        T val = j.template get<T>();
+        lst.buf.push_back(val);
+    }
+
+    return true;
+};
+
 
 
 
@@ -616,15 +652,7 @@ struct st_Project
     em_BaseSettingShootingMode BaseSettingShootingMode;
     em_RecFormatFrequency RecFormatFrequency;
     em_RecFormatVideoFormat RecFormatVideoFormat;
-
-public:
-    NLOHMANN_DEFINE_TYPE_INTRUSIVE(
-        st_Project,
-
-        BaseSettingShootingMode,
-        RecFormatFrequency,
-        RecFormatVideoFormat
-    )
+    st_List<em_RecFormatVideoFormat> RecFormatVideoFormatList;
 };
 
 
@@ -728,6 +756,9 @@ struct st_Srt
 
 void to_json(njson& j, const st_Imaging& p);
 void from_json(const njson& j, st_Imaging& p);
+
+void to_json(njson& j, const st_Project& p);
+void from_json(const njson& j, st_Project& p);
 
 void to_json(njson& j, const st_Network& p);
 void from_json(const njson& j, st_Network& p);
