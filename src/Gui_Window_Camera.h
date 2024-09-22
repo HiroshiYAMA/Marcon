@@ -72,13 +72,18 @@ public:
         ISO,
         IRIS,
         ND,
-        FPS,
+        SYSTEM,
 
-        PTZ,
-        FOCUS,
         STREAMING,
 
         LIVE_VIEW,
+    };
+
+    enum class em_System_State {
+        MAIN,
+        FPS,
+        VIDEO_FORMAT,
+        SHOOTING_MODE,
     };
 
     enum class em_Ptzf_State {
@@ -112,8 +117,6 @@ public:
         MODE,
         CONTROL,
     };
-
-    enum class em_StateFPS {};
 
 private:
     const std::list<std::pair<CGICmd::em_ExposureShutterModeState, std::string>> exposure_shutter_mode_state = {
@@ -177,7 +180,7 @@ private:
         {CGICmd::ExposureNDClear_FILTERED, "Filtered"},
     };
 
-    const std::list<std::pair<CGICmd::em_RecFormatFrequency, std::string>> fps_mode_state = {
+    const std::list<std::pair<CGICmd::em_RecFormatFrequency, std::string>> system_fps = {
         {CGICmd::RecFormatFrequency_5994, "59.94p"},
         {CGICmd::RecFormatFrequency_5000, "50p"},
         {CGICmd::RecFormatFrequency_2997, "29.97p"},
@@ -186,12 +189,19 @@ private:
         {CGICmd::RecFormatFrequency_2398, "23.98p"},
     };
 
-    const std::list<std::pair<CGICmd::em_RecFormatVideoFormat, std::string>> fps_video_format = {
+    const std::list<std::pair<CGICmd::em_RecFormatVideoFormat, std::string>> system_video_format = {
         {CGICmd::RecFormatVideoFormat_4096x2160p, "4096x2160p"},
         {CGICmd::RecFormatVideoFormat_3840x2160p, "3840x2160p"},
         {CGICmd::RecFormatVideoFormat_1920x1080p, "1920x1080p"},
         {CGICmd::RecFormatVideoFormat_1920x1080p_50, "1920x1080p_50"},
         {CGICmd::RecFormatVideoFormat_1920x1080p_35, "1920x1080p_35"},
+    };
+
+    const std::list<std::pair<CGICmd::em_BaseSettingShootingMode, std::string>> system_shooting_mode = {
+        {CGICmd::BaseSettingShootingMode_CUSTOM, "Custom"},
+        {CGICmd::BaseSettingShootingMode_FLEXIBLE_ISO, "Flexible ISO"},
+        {CGICmd::BaseSettingShootingMode_CINE_EI, "Cine EI"},
+        {CGICmd::BaseSettingShootingMode_CINE_EI_QUICK, "Cine EI Quick"},
     };
 
     st_RemoteServer remote_server = {};
@@ -203,6 +213,8 @@ private:
 
     em_State stat_main = em_State::MAIN;
     em_State stat_main_bkup = em_State::MAIN;
+
+    em_System_State stat_system = em_System_State::MAIN;
 
     em_Ptzf_State stat_ptzf = em_Ptzf_State::PTZ;
 
@@ -770,16 +782,16 @@ private:
                                     auto p = ImGui::GetCursorScreenPos();
 
                                     ImGui::SetCursorScreenPos(ImVec2(left_x, p.y));
-                                    auto is_press = (ImGui::Button("FPS", btn_size) || ImGui::IsKeyPressed(ImGuiKey_W, false));
+                                    auto is_press = (ImGui::Button("SYSTEM", btn_size) || ImGui::IsKeyPressed(ImGuiKey_W, false));
 
-                                    spacing(); show_panel_fps_mode_str();
-                                    spacing(); show_panel_fps_video_format();
+                                    spacing(); show_panel_system_fps_str();
+                                    spacing(); show_panel_system_video_format_str();
 
                                     ImGui::SetCursorScreenPos(p);
-                                    is_press |= ImGui::InvisibleButton("##FPS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+                                    is_press |= ImGui::InvisibleButton("##SYSTEM", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
 
                                     if (is_press) {
-                                        stat_main = em_State::FPS;
+                                        stat_main = em_State::SYSTEM;
                                     }
                                 }
                                 ImGui::EndChild();
@@ -2577,75 +2589,325 @@ private:
 
 
     /////////////////////////////////////////////////////////////////
-    // FPS control.
+    // SYSTEM control.
     /////////////////////////////////////////////////////////////////
-    void show_panel_fps_mode_str(bool center = false)
+    void show_panel_system_fps_str(bool center = false)
     {
-        ImGui::PushID("FPS_MODE_STR");
+        ImGui::PushID("SYSTEM_FPS");
 
         auto &project = cgi->inquiry_project();
         auto idx = project.RecFormatFrequency;
-        auto &vec = fps_mode_state;
+        auto &vec = system_fps;
         show_panel_state_mode_str(idx, vec, center);
 
         ImGui::PopID();
     }
 
-    void show_panel_fps_video_format(bool center = false)
+    void show_panel_system_video_format_str(bool center = false)
     {
-        ImGui::PushID("FPS_VIDEO_FORMAT");
+        ImGui::PushID("SYSTEM_VIDEO_FORMAT");
 
         auto &project = cgi->inquiry_project();
         auto idx = project.RecFormatVideoFormat;
-        auto &vec = fps_video_format;
+        auto &vec = system_video_format;
         show_panel_state_mode_str(idx, vec, center);
 
         ImGui::PopID();
     }
 
-    void show_panel_fps_control()
+    void show_panel_system_shooting_mode_str(bool center = false)
     {
-        ImGui::PushID("FPS_Control");
+        ImGui::PushID("SYSTEM_VIDEO_FORMAT");
 
-        if (ImGui::Button("FPS")) {
-            ;
+        auto &project = cgi->inquiry_project();
+        auto idx = project.BaseSettingShootingMode;
+        auto &vec = system_shooting_mode;
+        show_panel_state_mode_str(idx, vec, center);
+
+        ImGui::PopID();
+    }
+
+    void show_panel_system_control_shooting_mode_select()
+    {
+        auto &project = cgi->inquiry_project();
+        auto mode = project.BaseSettingShootingMode;
+
+        auto f = [&](CGICmd::em_BaseSettingShootingMode val) -> void { cgi->set_project_BaseSettingShootingMode(val); };
+
+        show_panel_select_value_listbox(
+            "##SYSTEM_Control_SHOOTING_MODE_SELECT",
+            mode,
+            CGICmd::em_BaseSettingShootingMode::BaseSettingShootingMode_CUSTOM,
+            CGICmd::em_BaseSettingShootingMode::BaseSettingShootingMode_CINE_EI_QUICK,
+            system_shooting_mode, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_system_control_shooting_mode()
+    {
+        ImGui::PushID("SYTEM_Control_SHOOTING_MODE");
+
+        auto &project = cgi->inquiry_project();
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("SYSTEM_Control_SHOOTING_MODE", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                show_panel_system_control_shooting_mode_select();
+
+                ImGui::TableSetColumnIndex(2);
+                // show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
         }
 
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
+            stat_system = em_System_State::MAIN;
+
+        // } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+        //     stat_main_bkup = stat_main;
+        //     stat_main = em_State::LIVE_VIEW;
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_system_control_main()
+    {
+        ImGui::PushID("SYSTEM_Control_Main");
+
+        auto tbl_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        auto cld_flags = ImGuiChildFlags_None;
+        auto win_flags = ImGuiWindowFlags_None;
+
+        auto &style = ImGui::GetStyle();
+        auto frm_padding = style.FramePadding;
+        auto win_size = ImGui::GetWindowSize();
+
+        auto btn_width = win_size.x / 3 - frm_padding.x * 4;
+        auto btn_size = ImVec2(btn_width, 0);
+
+        auto left_x = win_size.x / 6 - btn_width / 2;
+        auto center_x = left_x + win_size.x / 3;
+        auto right_x = center_x + win_size.x / 3;
+
+        constexpr auto font_scale = 1.5f;
+        auto spacing = []() { ImGui::Text(" "); ImGui::SameLine(); };
+
+        if (ImGui::BeginTable("system_control", 1, tbl_flags))
         {
             auto p = ImGui::GetCursorScreenPos();
             auto sz = ImGui::GetWindowSize();
-            auto text_height = ImGui::GetTextLineHeightWithSpacing();
-            auto p_center = ImVec2(p.x, p.y + sz.y / 2 - text_height * 4.5f);
-            ImGui::SetCursorScreenPos(p_center);
-        }
-        {
-            constexpr auto btn_scale = 3.0f;
-            ImGui::SetWindowFontScale(btn_scale);
-            std::string str = "KJC";
-            centering_text_pos(str.c_str());
-            auto col = (gui_skin != em_GuiSkin::LIGHT) ? ImVec4{1, 1, 0, 1} : ImVec4{0.7f, 0.7f, 0, 1};
-            ImGui::TextColored(col, "%s", str.c_str());
-            ImGui::SetWindowFontScale(1.0f);
-        }
-        ImGui::SetWindowFontScale(1.5f);
-        show_panel_fps_mode_str(true);
-        show_panel_fps_video_format(true);
-        ImGui::SetWindowFontScale(1.0f);
+            float min_row_height = (sz.y - p.y - 24) / 3;
 
-        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            for (int row = 0; row < 3; row++)
+            {
+                ImGui::TableNextRow(ImGuiTableRowFlags_None, min_row_height);
+                ImGui::TableNextColumn();
+
+                if (row == 0) {
+                    ImGui::SetWindowFontScale(font_scale);
+                    if (ImGui::BeginTable("system_control_top", 3, ImGuiTableFlags_BordersInnerV))
+                    {
+                        for (int row = 0; row < 1; row++)
+                        {
+                            ImGui::TableNextRow();
+
+                            ///////////////////////////////////////////////////////////////////////
+                            // TOP LEFT.
+                            ///////////////////////////////////////////////////////////////////////
+                            ImGui::TableSetColumnIndex(0);
+                            {
+                                if (ImGui::BeginChild("system_control_top_left", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
+                                    auto p = ImGui::GetCursorScreenPos();
+
+                                    ImGui::SetCursorScreenPos(ImVec2(left_x, p.y));
+                                    auto is_press = (ImGui::Button("FPS", btn_size) || ImGui::IsKeyPressed(ImGuiKey_W, false));
+
+                                    spacing(); show_panel_system_fps_str();
+
+                                    ImGui::SetCursorScreenPos(p);
+                                    is_press |= ImGui::InvisibleButton("##FPS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+
+                                    if (is_press) {
+                                        // stat_system = em_System_State::FPS;
+                                    }
+                                }
+                                ImGui::EndChild();
+                            }
+
+                            ///////////////////////////////////////////////////////////////////////
+                            // TOP CENTER.
+                            ///////////////////////////////////////////////////////////////////////
+                            ImGui::TableSetColumnIndex(1);
+                            {
+                                if (ImGui::BeginChild("system_control_top_center", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
+                                    auto p = ImGui::GetCursorScreenPos();
+
+                                    ImGui::SetCursorScreenPos(ImVec2(center_x, p.y));
+                                    auto is_press = (ImGui::Button("SHOOT MODE", btn_size) || ImGui::IsKeyPressed(ImGuiKey_E, false));
+
+                                    ImGui::SetWindowFontScale(0.85);
+                                    spacing(); show_panel_system_shooting_mode_str();
+
+                                    ImGui::SetCursorScreenPos(p);
+                                    is_press |= ImGui::InvisibleButton("##SHOOT MODE", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+
+                                    if (is_press) {
+                                        stat_system = em_System_State::SHOOTING_MODE;
+                                    }
+                                }
+                                ImGui::EndChild();
+                            }
+
+                            ///////////////////////////////////////////////////////////////////////
+                            // TOP RIGHT.
+                            ///////////////////////////////////////////////////////////////////////
+                            ImGui::TableSetColumnIndex(2);
+                            {
+                                if (ImGui::BeginChild("system_control_top_right", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
+                                    ;
+                                }
+                                ImGui::EndChild();
+                            }
+                        }
+                        ImGui::EndTable();
+                    }
+                    ImGui::SetWindowFontScale(1.0f);
+
+                } else if (row == 1) {
+                    if (ImGui::BeginTable("system_control_middle", 2, ImGuiTableFlags_BordersInnerV))
+                    {
+                        for (int row = 0; row < 1; row++)
+                        {
+                            ImGui::TableNextRow();
+
+                            ///////////////////////////////////////////////////////////////////////
+                            // MIDDLE LEFT.
+                            ///////////////////////////////////////////////////////////////////////
+                            ImGui::TableSetColumnIndex(0);
+                            {
+                                ImGui::SetWindowFontScale(0.75f);
+
+                                // print selected camera info.
+                                show_panel_print_selected_camera_info();
+
+                                ImGui::SetWindowFontScale(1.0f);
+                            }
+
+                            ///////////////////////////////////////////////////////////////////////
+                            // MIDDLE RIGHT.
+                            ///////////////////////////////////////////////////////////////////////
+                            ImGui::TableSetColumnIndex(1);
+                            {
+                                ;
+                            }
+                        }
+                        ImGui::EndTable();
+                    }
+
+                } else if (row == 2) {
+                    ImGui::SetWindowFontScale(font_scale);
+                    if (ImGui::BeginTable("system_control_bottom", 3, ImGuiTableFlags_BordersInnerV))
+                    {
+                        for (int row = 0; row < 1; row++)
+                        {
+                            ImGui::TableNextRow();
+
+                            ///////////////////////////////////////////////////////////////////////
+                            // BOTTOM LEFT.
+                            ///////////////////////////////////////////////////////////////////////
+                            ImGui::TableSetColumnIndex(0);
+                            {
+                                if (ImGui::BeginChild("system_control_bottom_left", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
+                                    auto p = ImGui::GetCursorScreenPos();
+
+                                    ImGui::SetCursorScreenPos(ImVec2(left_x, p.y));
+                                    auto is_press = (ImGui::Button("VIDEO Fmt.", btn_size) || ImGui::IsKeyPressed(ImGuiKey_X, false));
+
+                                    spacing(); show_panel_system_video_format_str();
+
+                                    ImGui::SetCursorScreenPos(p);
+                                    is_press |= ImGui::InvisibleButton("##VIDEO Fmt.", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
+
+                                    if (is_press) {
+                                        // stat_system = em_System_State::VIDEO_FORMAT;
+                                    }
+                                }
+                                ImGui::EndChild();
+                            }
+
+                            ///////////////////////////////////////////////////////////////////////
+                            // BOTTOM CENTER.
+                            ///////////////////////////////////////////////////////////////////////
+                            ImGui::TableSetColumnIndex(1);
+                            {
+                                if (ImGui::BeginChild("system_control_bottom_center", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
+                                    ;
+                                }
+                                ImGui::EndChild();
+                            }
+
+                            ///////////////////////////////////////////////////////////////////////
+                            // BOTTOM RIGHT.
+                            ///////////////////////////////////////////////////////////////////////
+                            ImGui::TableSetColumnIndex(2);
+                            {
+                                if (ImGui::BeginChild("system_control_bottom_right", ImVec2(-1, min_row_height), cld_flags, win_flags)) {
+                                    ;
+                                }
+                                ImGui::EndChild();
+                            }
+                        }
+                        ImGui::EndTable();
+                    }
+                    ImGui::SetWindowFontScale(1.0f);
+                }
+            }
+            ImGui::EndTable();
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             stat_main = em_State::MAIN;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_X, false)) {
-            ;
-        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
-            stat_main_bkup = stat_main;
-            stat_main = em_State::LIVE_VIEW;
         }
 
-        auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
-        auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
         if (is_drag_left) {
             stat_main = em_State::MAIN;
-        } else if (is_drag_right) {
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_system_control()
+    {
+        ImGui::PushID("SYSTEM_Control");
+
+        switch(stat_system) {
+        case em_System_State::MAIN:
+            show_panel_system_control_main();
+            break;
+
+        case em_System_State::FPS:
+            break;
+
+        case em_System_State::SHOOTING_MODE:
+            show_panel_system_control_shooting_mode();
+            break;
+
+        case em_System_State::VIDEO_FORMAT:
+            break;
+
+        default:
             ;
         }
 
@@ -3067,15 +3329,13 @@ public:
             case em_State::ND:
                 show_panel_nd_control();
                 break;
-            case em_State::FPS:
-                show_panel_fps_control();
+            case em_State::SYSTEM:
+                show_panel_system_control();
                 break;
             default:
                 ;
             }
 
-            // PTZ
-            // focus.
             // Stream setting.
         }
         ImGui::End();
@@ -3375,7 +3635,7 @@ public:
             case em_State::ISO:
             case em_State::IRIS:
             case em_State::ND:
-            case em_State::FPS:
+            case em_State::SYSTEM:
                 {
                     auto is_update = cgi->is_update_cmd_info();
 

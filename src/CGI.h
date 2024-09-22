@@ -561,6 +561,20 @@ public:
 
 /////////////////////////////////////////////////////////////////////
 // project.
+enum em_BaseSettingShootingMode
+{
+    BaseSettingShootingMode_CUSTOM,
+    BaseSettingShootingMode_FLEXIBLE_ISO,
+    BaseSettingShootingMode_CINE_EI,
+    BaseSettingShootingMode_CINE_EI_QUICK,
+};
+NLOHMANN_JSON_SERIALIZE_ENUM( em_BaseSettingShootingMode, {
+    {BaseSettingShootingMode_CUSTOM, "custom"},
+    {BaseSettingShootingMode_FLEXIBLE_ISO, "flexible_iso"},
+    {BaseSettingShootingMode_CINE_EI, "cine_ei"},
+    {BaseSettingShootingMode_CINE_EI_QUICK, "cine_ei_quick"},
+})
+
 enum em_RecFormatFrequency
 {
     RecFormatFrequency_5994,
@@ -599,6 +613,7 @@ struct st_Project
 {
     static constexpr auto cmd = "project";
 
+    em_BaseSettingShootingMode BaseSettingShootingMode;
     em_RecFormatFrequency RecFormatFrequency;
     em_RecFormatVideoFormat RecFormatVideoFormat;
 
@@ -606,6 +621,7 @@ public:
     NLOHMANN_DEFINE_TYPE_INTRUSIVE(
         st_Project,
 
+        BaseSettingShootingMode,
         RecFormatFrequency,
         RecFormatVideoFormat
     )
@@ -1355,6 +1371,18 @@ public:
         msg += "&";
         msg += "TallyLampBrightness=" + json_conv_enum2str(brightness);
         set_command<CGICmd::st_Tally>(msg);
+    }
+
+
+
+    /////////////////////////////////////////////////////////////////
+    // project.
+    void set_project_BaseSettingShootingMode(CGICmd::em_BaseSettingShootingMode val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "BaseSettingShootingMode=" + str;
+        set_command<CGICmd::st_Project>(msg);
     }
 
 
