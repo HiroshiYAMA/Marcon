@@ -1385,6 +1385,14 @@ public:
         set_command<CGICmd::st_Project>(msg);
     }
 
+    void set_project_RecFormatVideoFormat(CGICmd::em_RecFormatVideoFormat val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "RecFormatVideoFormat=" + str;
+        set_command<CGICmd::st_Project>(msg);
+    }
+
 
 
     /////////////////////////////////////////////////////////////////

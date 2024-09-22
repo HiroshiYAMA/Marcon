@@ -2630,7 +2630,7 @@ private:
     void show_panel_system_control_shooting_mode_select()
     {
         auto &project = cgi->inquiry_project();
-        auto mode = project.BaseSettingShootingMode;
+        auto &mode = project.BaseSettingShootingMode;
 
         auto f = [&](CGICmd::em_BaseSettingShootingMode val) -> void { cgi->set_project_BaseSettingShootingMode(val); };
 
@@ -2661,6 +2661,61 @@ private:
 
                 ImGui::TableSetColumnIndex(1);
                 show_panel_system_control_shooting_mode_select();
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
+            stat_system = em_System_State::MAIN;
+
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
+        }
+
+        ImGui::PopID();
+    }
+
+    void show_panel_system_control_video_format_select()
+    {
+        auto &project = cgi->inquiry_project();
+        auto &val = project.RecFormatVideoFormat;
+
+        auto f = [&](CGICmd::em_RecFormatVideoFormat val) -> void { cgi->set_project_RecFormatVideoFormat(val); };
+
+        show_panel_select_value_listbox(
+            "##SYSTEM_Control_VIDEO_FORMAT_SELECT",
+            val,
+            CGICmd::em_RecFormatVideoFormat::RecFormatVideoFormat_4096x2160p,
+            // CGICmd::em_RecFormatVideoFormat::RecFormatVideoFormat_1920x1080p_35,
+            CGICmd::em_RecFormatVideoFormat::RecFormatVideoFormat_1920x1080p,
+            system_video_format, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_system_control_video_format()
+    {
+        ImGui::PushID("SYTEM_Control_VIDEO_FORMAT");
+
+        auto &project = cgi->inquiry_project();
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("SYSTEM_Control_VIDEO_FORMAT", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+
+                ImGui::TableSetColumnIndex(1);
+                show_panel_system_control_video_format_select();
 
                 ImGui::TableSetColumnIndex(2);
                 show_panel_live_view_with_info();
@@ -2856,7 +2911,7 @@ private:
                                     is_press |= ImGui::InvisibleButton("##VIDEO Fmt.", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
 
                                     if (is_press) {
-                                        // stat_system = em_System_State::VIDEO_FORMAT;
+                                        stat_system = em_System_State::VIDEO_FORMAT;
                                     }
                                 }
                                 ImGui::EndChild();
@@ -2924,6 +2979,7 @@ private:
             break;
 
         case em_System_State::VIDEO_FORMAT:
+            show_panel_system_control_video_format();
             break;
 
         default:
