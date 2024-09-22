@@ -2663,7 +2663,7 @@ private:
                 show_panel_system_control_shooting_mode_select();
 
                 ImGui::TableSetColumnIndex(2);
-                // show_panel_live_view_with_info();
+                show_panel_live_view_with_info();
             }
             ImGui::EndTable();
         }
@@ -2673,9 +2673,9 @@ private:
         if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
             stat_system = em_System_State::MAIN;
 
-        // } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
-        //     stat_main_bkup = stat_main;
-        //     stat_main = em_State::LIVE_VIEW;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
         }
 
         ImGui::PopID();
@@ -2809,7 +2809,23 @@ private:
                             ///////////////////////////////////////////////////////////////////////
                             ImGui::TableSetColumnIndex(1);
                             {
-                                ;
+                                ImVec2 p = ImGui::GetCursorScreenPos();
+                                ImVec2 win_size = ImGui::GetWindowSize();
+
+                                show_panel_live_view(win_size.x / 4, false, true);
+
+                                ImGui::SetCursorScreenPos(p);
+                                ImGui::InvisibleButton("##INVISIBULE_BUTTON", ImVec2(win_size.x / 4, min_row_height));
+                                auto is_hovered = ImGui::IsItemHovered();
+                                if (is_hovered && ImGui::IsMouseClicked(0)) {
+                                    stat_main_bkup = stat_main;
+                                    stat_main = em_State::LIVE_VIEW;
+                                }
+
+                                ImGui::SameLine();
+
+                                // show_panel_blink_tally(false, true);
+                                show_panel_blink_tally(remote_server.ip_address);
                             }
                         }
                         ImGui::EndTable();
@@ -2878,6 +2894,9 @@ private:
 
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             stat_main = em_State::MAIN;
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false)) {
+            stat_main_bkup = stat_main;
+            stat_main = em_State::LIVE_VIEW;
         }
 
         auto [is_drag_left, mouse_delta] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
