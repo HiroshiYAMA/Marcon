@@ -1408,6 +1408,14 @@ public:
 
     /////////////////////////////////////////////////////////////////
     // project.
+    void set_project_RecFormatFrequency(CGICmd::em_RecFormatFrequency val)
+    {
+        std::string msg;
+        auto str = json_conv_enum2str(val);
+        msg = "RecFormatFrequency=" + str;
+        set_command<CGICmd::st_Project>(msg);
+    }
+
     void set_project_BaseSettingShootingMode(CGICmd::em_BaseSettingShootingMode val)
     {
         std::string msg;

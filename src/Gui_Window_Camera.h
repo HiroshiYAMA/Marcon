@@ -215,6 +215,7 @@ private:
     em_State stat_main_bkup = em_State::MAIN;
 
     em_System_State stat_system = em_System_State::MAIN;
+    CGICmd::em_RecFormatFrequency rec_fps_tmp;
 
     em_Ptzf_State stat_ptzf = em_Ptzf_State::PTZ;
 
@@ -2627,6 +2628,66 @@ private:
         ImGui::PopID();
     }
 
+    void show_panel_system_control_fps_select()
+    {
+        // auto f = [&](CGICmd::em_RecFormatFrequency val) -> void { cgi->set_project_RecFormatFrequency(val); };
+        auto f = [&](CGICmd::em_RecFormatFrequency val) -> void {};  // dummy function.
+
+        show_panel_select_value_listbox(
+            "##SYSTEM_Control_FPS_SELECT",
+            rec_fps_tmp,
+            CGICmd::em_RecFormatFrequency::RecFormatFrequency_5994,
+            CGICmd::em_RecFormatFrequency::RecFormatFrequency_2398,
+            system_fps, f,
+            0.5f, 0.1f
+        );
+    }
+
+    void show_panel_system_control_fps()
+    {
+        ImGui::PushID("SYTEM_Control_FPS");
+
+        auto &project = cgi->inquiry_project();
+
+        ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
+        if (ImGui::BeginTable("SYSTEM_Control_FPS", 3, flags))
+        {
+            for (int row = 0; row < 1; row++)
+            {
+                ImGui::TableNextRow();
+
+                ImGui::TableSetColumnIndex(0);
+                {
+                    ImGui::SetWindowFontScale(1.5f);
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 0, 1));
+                    ImGui::TextWrapped("Push the DIAL BUTTON to set FPS,");
+                    ImGui::TextWrapped("then wait for the camera to reboot...");
+                    ImGui::PopStyleColor();
+                    ImGui::SetWindowFontScale(1.0f);
+                }
+
+                ImGui::TableSetColumnIndex(1);
+                show_panel_system_control_fps_select();
+
+                ImGui::TableSetColumnIndex(2);
+                show_panel_live_view_with_info();
+            }
+            ImGui::EndTable();
+        }
+
+        auto [is_drag_left, mouse_delta_left] = is_mouse_drag_to_left(ImGuiMouseButton_Left);
+        auto [is_drag_right, mouse_delta_right] = is_mouse_drag_to_right(ImGuiMouseButton_Left);
+
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) || is_drag_left) {
+            stat_system = em_System_State::MAIN;
+
+        } else if (ImGui::IsKeyPressed(ImGuiKey_Enter, false) || is_drag_right) {
+            cgi->set_project_RecFormatFrequency(rec_fps_tmp);
+        }
+
+        ImGui::PopID();
+    }
+
     void show_panel_system_control_shooting_mode_select()
     {
         auto &project = cgi->inquiry_project();
@@ -2802,7 +2863,8 @@ private:
                                     is_press |= ImGui::InvisibleButton("##FPS", ImVec2(-1, -1), ImGuiButtonFlags_MouseButtonLeft);
 
                                     if (is_press) {
-                                        // stat_system = em_System_State::FPS;
+                                        stat_system = em_System_State::FPS;
+                                        rec_fps_tmp = cgi->inquiry_project().RecFormatFrequency;
                                     }
                                 }
                                 ImGui::EndChild();
@@ -2980,6 +3042,7 @@ private:
             break;
 
         case em_System_State::FPS:
+            show_panel_system_control_fps();
             break;
 
         case em_System_State::SHOOTING_MODE:
