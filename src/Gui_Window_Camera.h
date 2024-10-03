@@ -145,8 +145,8 @@ private:
     };
 
     const std::list<std::pair<CGICmd::COMMON::em_LowHigh, std::string>> iso_base_sensitivity = {
-        {CGICmd::COMMON::LOW, "SDR"},
-        {CGICmd::COMMON::HIGH, "HDR"},
+        {CGICmd::COMMON::LOW, "Base Low"},
+        {CGICmd::COMMON::HIGH, "Base High"},
     };
 
     const std::list<std::pair<CGICmd::em_ExposureBaseISO, std::string>> iso_base_iso = {
