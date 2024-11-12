@@ -33,6 +33,9 @@ em_GuiSkin gui_skin = em_GuiSkin::DARK;
 // visualized scale of display.
 float vis_xscale, vis_yscale;
 
+// scale of font size.
+float app_font_scale = app_font_scale_base;
+
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);

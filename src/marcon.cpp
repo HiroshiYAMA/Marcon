@@ -25,16 +25,29 @@
 #include "opencv_utils.h"
 #include "IpNetwork.h"
 
+constexpr auto APP_WIN_BASE_W = 800;
+constexpr auto APP_WIN_BASE_H = 480;
+
 // Main code
 int main(int ac, char *av[])
 {
     init_search_ipadr();
 
-    auto win_w = 800;
-    auto win_h = 480;
-
     // initialize GLFW.
     auto glsl_version = init_glfw();
+
+    GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode *vmode = glfwGetVideoMode(monitor);
+    auto display_w = vmode->width;
+    auto display_h = vmode->height;
+
+    auto win_w = display_w;
+    auto win_h = display_h;
+
+    float scale_w = float(display_w) / APP_WIN_BASE_W;
+    float scale_h = float(display_h) / APP_WIN_BASE_H;
+
+    set_app_font_scale(scale_w);
 
     // Create window with graphics context
     GLFWwindow* window = glfwCreateWindow(win_w, win_h, "Marcon (w/ Dear ImGui)", nullptr, nullptr);

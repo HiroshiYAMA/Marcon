@@ -74,11 +74,18 @@ extern em_GuiSkin gui_skin;
 // visualized scale of display.
 extern float vis_xscale, vis_yscale;
 
-constexpr auto app_font_scale = 2.0f;
+// scale of font size.
+extern float app_font_scale;
+
+constexpr auto app_font_scale_base = 2.0f;
 
 extern std::string init_glfw();
 extern void setup_imgui(GLFWwindow* window, const char *glsl_version);
 extern void cleanup_imgui_glfw(GLFWwindow* window);
+
+inline auto set_app_font_scale = [](float scale) -> void {
+    app_font_scale = app_font_scale_base * scale;
+};
 
 // フルスクリーンモードにする(メイン映像の見た目はウィンドウモード).
 extern void setDisplayModeFullscreen(GLFWwindow* window);
