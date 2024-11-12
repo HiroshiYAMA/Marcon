@@ -1,8 +1,8 @@
 [Desktop Entry]
 Encoding=UTF-8
-Name=LCD rotation RIGHT
+Name=LCD rotation
 Comment=Execute the script
-Exec=<hogehoge>/LCD_panel_rotate_RIGHT.sh
+Exec=<hogehoge>/LCD_panel_rotate.sh
 Path=<fugafuga>
 Icon=<foobar>/icons/face-cool_red.png
 Type=Application
