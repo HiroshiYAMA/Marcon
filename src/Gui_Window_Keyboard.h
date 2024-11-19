@@ -89,9 +89,15 @@ private:
 public:
     bool display_keyboard_window(bool req_open, const std::string &text_name, std::string &text, em_KeyboardPattern kb_pat_init = em_KeyboardPattern::LOWER, bool is_password = false)
     {
+        auto scale = app_font_scale / app_font_scale_base;
+
         ImGuiStyle& style = ImGui::GetStyle();
         style.FrameRounding = 8.0f * vis_xscale;
         style.GrabRounding = 16.0f * vis_xscale;
+
+        auto item_spacing_bkup = style.ItemSpacing;
+        style.ItemSpacing.x *= scale;
+        style.ItemSpacing.y *= scale;
 
         ImVec4* colors = style.Colors;
         colors[ImGuiCol_FrameBg] = ImVec4(0.43f, 0.43f, 0.43f, 0.39f);
@@ -144,8 +150,8 @@ public:
             text = std::string{ tmp_text.c_str() };
 
             const auto text_size = ImGui::CalcTextSize("A");
-            auto btn_size_x = (text_size.x + pad_frame.x) * BUTTON_SCALE + BUTTON_SPACE;
-            auto btn_size_y = (text_size.y + pad_frame.y) * BUTTON_SCALE + BUTTON_SPACE;
+            auto btn_size_x = (text_size.x + pad_frame.x * scale) * BUTTON_SCALE + BUTTON_SPACE * scale;
+            auto btn_size_y = (text_size.y + pad_frame.y * scale) * BUTTON_SCALE + BUTTON_SPACE * scale;
             if (btn_size_x > btn_size_y) btn_size_y = btn_size_x; else btn_size_x = btn_size_y;
             const ImVec2 btn_size(btn_size_x, btn_size_y);
             for (auto j = 0; j < KEYBOARD_ROW; j++) {
@@ -188,6 +194,8 @@ public:
 
             ImGui::EndPopup();
         }
+
+        style.ItemSpacing = item_spacing_bkup;
 
         return is_opened;
     }
