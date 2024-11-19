@@ -77,6 +77,9 @@ std::string init_glfw()
 void setup_imgui(GLFWwindow* window, const char *glsl_version)
 {
     glfwGetWindowContentScale(window, &vis_xscale, &vis_yscale);
+    // [ad-hoc] adjust scale.
+    vis_xscale = 1.0f;
+    vis_yscale = 1.0f;
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
