@@ -73,7 +73,7 @@ std::string make_gst_pipeline(const st_RemoteServer &remote_server)
     ss << (remote_server.is_srt_listener ? "" : remote_server.ip_address);
     ss << ":" << remote_server.srt_port << " ! ";
     ss << "tsdemux ! ";
-    ss << "queue ! ";
+    ss << "queue max-size-buffers=20 leaky=downstream ! ";
     ss << "h264parse ! video/x-h264 ! ";
 #ifdef GST_NV
     ss << "nvv4l2decoder ! ";
@@ -91,7 +91,7 @@ std::string make_gst_pipeline(const st_RemoteServer &remote_server)
 #endif
     ss << "videoconvert n-threads=" << thread_count << " ! video/x-raw,format=BGR ! ";
 
-    ss << "appsink sync=false";
+    ss << "appsink sync=false max-buffers=1 drop=True";
     std::string str = ss.str();
 
     return str;
