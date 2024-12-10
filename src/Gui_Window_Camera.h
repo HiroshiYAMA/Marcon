@@ -256,6 +256,7 @@ private:
     std::unique_ptr<ProcLiveView> proc_live_view;
     std::thread thd_proc_live_view;
     // bool is_display_image;
+    int queue_size;
 
     // CGI.
     std::unique_ptr<CGI> cgi;
@@ -3378,9 +3379,10 @@ private:
     }
 
 public:
-    Gui_Window_Camera(int _width, int _height, const st_RemoteServer &_remote_server)
+    Gui_Window_Camera(int _width, int _height, const st_RemoteServer &_remote_server, int _queue_size)
     {
         remote_server = _remote_server;
+        queue_size = _queue_size;
 
         tex_width = _width * vis_xscale;
         tex_height = _height * vis_xscale;
@@ -3764,7 +3766,7 @@ public:
                     cgi->inquiry(srt);
                     remote_server.srt_port = std::to_string(srt.SrtListenPort);
 
-                    proc_live_view.reset(new ProcLiveView(remote_server, tex_width, tex_height));
+                    proc_live_view.reset(new ProcLiveView(remote_server, tex_width, tex_height, queue_size));
                     if (proc_live_view && proc_live_view->is_running()) {
                         std::thread thd_tmp{ [&]{ proc_live_view->run(); }};
                         thd_proc_live_view = std::move(thd_tmp);

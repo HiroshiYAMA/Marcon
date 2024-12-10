@@ -93,6 +93,9 @@ private:
 
     bool show_demo_window;
 
+    static constexpr int QUEUE_SIZE_DEFAULT = 20;
+    int queue_size;
+
     Gui_Window_Keyboard kb;
     bool display_input_ip_address;
     bool display_input_port_number;
@@ -133,6 +136,11 @@ private:
                     if (ImGui::MenuItem("Dark", NULL)) { ImGui::StyleColorsDark(); gui_skin = em_GuiSkin::DARK; }
                     if (ImGui::MenuItem("Light", NULL)) { ImGui::StyleColorsLight(); gui_skin = em_GuiSkin::LIGHT; }
                     if (ImGui::MenuItem("Classic", NULL)) { ImGui::StyleColorsClassic(); gui_skin = em_GuiSkin::CLASSIC; }
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("Options"))
+                {
+                    ImGui::InputInt("queue size", &queue_size);
                     ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Demoru?", NULL)) { show_demo_window = true; }
@@ -202,7 +210,7 @@ private:
         if (ImGui::Button(str.c_str(), btn_size)) {
             auto &gui_win_camera = rs_info.handle;
             if (!gui_win_camera) {
-                gui_win_camera = std::make_unique<Gui_Window_Camera>(win_w, win_h, rs_info.remote_server);
+                gui_win_camera = std::make_unique<Gui_Window_Camera>(win_w, win_h, rs_info.remote_server, queue_size);
                 if (gui_win_camera) {
                     if (gui_win_camera->is_CONNECTED()) {
                         state = em_State::CAMERA_CONTROL;
@@ -506,6 +514,8 @@ public:
         state = em_State::LANCHER;
 
         show_demo_window = false;
+
+        queue_size = QUEUE_SIZE_DEFAULT;
 
         kb = {};
         display_input_ip_address = false;
